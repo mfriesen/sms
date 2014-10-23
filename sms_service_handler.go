@@ -3,65 +3,83 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"strconv"
-	"strings"
+	"regexp"
 )
 
 type ServiceHandler interface {
 	Connect(service Service)
 	Disconnect(service Service)
-	Start(service Service)
+	Start(service Service) int
 	Status(service Service) int
-	Stop(service Service)
+	Stop(service Service) int
 }
 
-type LinuxSSHServiceHandler struct {
+type LinuxServiceHandler struct {
 	handler ProtocolHandler
 }
 
-func (r LinuxSSHServiceHandler) Connect(service Service) {
+func (r *LinuxServiceHandler) Connect(service Service) {
 	fmt.Println("connecting to server")
 	r.handler.OpenConnection(service)
 }
 
-func (r LinuxSSHServiceHandler) Disconnect(service Service) {
+func (r *LinuxServiceHandler) Disconnect(service Service) {
 	fmt.Println("disconnecting from server")
 	r.handler.CloseConnection()
 }
 
-func (r LinuxSSHServiceHandler) Start(service Service) {
+func (r *LinuxServiceHandler) Start(service Service) int {
 	fmt.Println("starting service")
+
+	service.action = "start"
+	r.RunAction(service)
+
+	return r.Status(service)
 }
 
-// find /var/run/ -name 'jenkins.pid' -exec cat {} \; 2> /dev/null | xargs ps -p
-func (r LinuxSSHServiceHandler) Status(service Service) int {
-
-	status := ServiceStatusUnknown
+func (r *LinuxServiceHandler) Status(service Service) int {
 
 	fmt.Println("determining service status")
 
-	var buffer bytes.Buffer
+	service.action = "status"
+	status := ServiceStatusUnknown
 
-	if service.sudo != "" {
-		buffer.WriteString(fmt.Sprintf("echo '%s' | sudo -S ", service.sudo))
-	}
+	text := r.RunAction(service)
 
-	buffer.WriteString(fmt.Sprintf("find /var/run/ -name '%s.pid' -exec cat {} \\; 2> /dev/null", service.name))
+	if len(text) > 0 {
 
-	pid := r.handler.Run(buffer.String())
+		rp := regexp.MustCompile("[0-9]+")
 
-	if _, err := strconv.Atoi(pid); err == nil {
-
-		result := r.handler.Run(fmt.Sprintf("ps -p %s", pid))
-
-		if strings.Contains(result, pid) {
+		if rp.MatchString(text) {
 			status = ServiceStatusStarted
+		} else {
+			status = ServiceStatusStopped
 		}
 	}
 
 	return status
 }
 
-func (r LinuxSSHServiceHandler) Stop(service Service) {
+func (r *LinuxServiceHandler) RunAction(service Service) string {
+
+	var buffer bytes.Buffer
+
+	if service.sudo != "" {
+		buffer.WriteString(fmt.Sprintf("echo '%s' | sudo -S service %s %s", service.sudo, service.name, service.action))
+	} else {
+		buffer.WriteString(fmt.Sprintf("sudo service %s %s", service.name, service.action))
+	}
+
+	text := r.handler.Run(buffer.String())
+
+	return text
+}
+
+func (r LinuxServiceHandler) Stop(service Service) int {
 	fmt.Println("stopping service")
+	service.action = "stop"
+
+	r.RunAction(service)
+
+	return r.Status(service)
 }

@@ -1,11 +1,13 @@
 package main
 
 import (
-	//"fmt"
 	"errors"
+	"fmt"
+	//"github.com/jcelliott/lumber"
 	"github.com/docopt/docopt-go"
 	"os"
 	"regexp"
+	"runtime"
 	"strings"
 )
 
@@ -86,6 +88,7 @@ func userHostUsage(argv []string, exit bool) (Service, error) {
 
 func main() {
 
+	fmt.Println("OS VERSION ", runtime.GOOS)
 	_, err := usage(os.Args[1:], true)
 
 	if err == nil {
