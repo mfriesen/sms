@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"testing"
 )
 
@@ -201,23 +200,23 @@ type MockProtocolHandler struct {
 }
 
 func (r *MockProtocolHandler) OpenConnection(service Service) {
-	fmt.Println("Mock Open connection")
+	log.Info("Mock Open connection")
 }
 
 func (r *MockProtocolHandler) Run(cmd string) string {
 
-	fmt.Println("mock sending cmd: ", cmd)
+	log.Info("mock sending cmd: ", cmd)
 
 	r.runs[r.run] = cmd
 	s := r.results[r.run]
 
 	r.run += 1
 
-	fmt.Println("mock got response ", s)
+	log.Info("mock got response ", s)
 
 	return s
 }
 
 func (r *MockProtocolHandler) CloseConnection() {
-	fmt.Println("mock close connection")
+	log.Info("mock close connection")
 }

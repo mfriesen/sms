@@ -2,9 +2,8 @@ package main
 
 import (
 	"errors"
-	"fmt"
-	//"github.com/jcelliott/lumber"
 	"github.com/docopt/docopt-go"
+	"github.com/jcelliott/lumber"
 	"os"
 	"regexp"
 	"runtime"
@@ -22,6 +21,10 @@ type Service struct {
 	action   string
 	sudo     string
 }
+
+var (
+	log = lumber.NewConsoleLogger(lumber.WARN)
+)
 
 const (
 	ServiceStatusUnknown = iota
@@ -88,7 +91,7 @@ func userHostUsage(argv []string, exit bool) (Service, error) {
 
 func main() {
 
-	fmt.Println("OS VERSION ", runtime.GOOS)
+	//fmt.Println("OS VERSION ", runtime.GOOS)
 	_, err := usage(os.Args[1:], true)
 
 	if err == nil {

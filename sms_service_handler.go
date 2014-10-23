@@ -19,17 +19,19 @@ type LinuxServiceHandler struct {
 }
 
 func (r *LinuxServiceHandler) Connect(service Service) {
-	fmt.Println("connecting to server")
+	log.Info("connecting to server")
+
 	r.handler.OpenConnection(service)
 }
 
 func (r *LinuxServiceHandler) Disconnect(service Service) {
-	fmt.Println("disconnecting from server")
+	log.Info("disconnecting from server")
+
 	r.handler.CloseConnection()
 }
 
 func (r *LinuxServiceHandler) Start(service Service) int {
-	fmt.Println("starting service")
+	log.Info("starting %s service", service.name)
 
 	service.action = "start"
 	r.RunAction(service)
@@ -39,7 +41,7 @@ func (r *LinuxServiceHandler) Start(service Service) int {
 
 func (r *LinuxServiceHandler) Status(service Service) int {
 
-	fmt.Println("determining service status")
+	log.Info("determining service %s status", service.name)
 
 	service.action = "status"
 	status := ServiceStatusUnknown
@@ -76,7 +78,8 @@ func (r *LinuxServiceHandler) RunAction(service Service) string {
 }
 
 func (r LinuxServiceHandler) Stop(service Service) int {
-	fmt.Println("stopping service")
+	log.Info("stopping %s service", service.name)
+
 	service.action = "stop"
 
 	r.RunAction(service)

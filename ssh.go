@@ -37,7 +37,7 @@ func (r *SSHProtocolHandler) OpenConnection(service Service) {
 
 func (r *SSHProtocolHandler) Run(cmd string) string {
 
-	fmt.Println("sending cmd: ", cmd)
+	log.Debug("sending cmd: ", cmd)
 
 	session, _ := r.client.NewSession()
 	defer session.Close()
@@ -55,7 +55,7 @@ func (r *SSHProtocolHandler) Run(cmd string) string {
 	}
 
 	s := strings.TrimSpace(string(result))
-	fmt.Println("got response ", s)
+	log.Debug("got response ", s)
 
 	return s
 }
