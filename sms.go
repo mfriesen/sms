@@ -56,6 +56,10 @@ func updateOptions(service Service, options map[string]interface{}) Service {
 		service.name = options["<servicename>"].(string)
 	}
 
+	if _, ok := options["--sudo"]; ok {
+		service.sudo = options["--sudo"].(string)
+	}
+
 	return service
 }
 
@@ -71,6 +75,7 @@ Usage:
   sms [options] <user>@<host> <servicename> stop
 
  Options:
+  --sudo=sudopw  sudo password
   -h, --help     show help
   -v, --verbose  show debug info
 `
