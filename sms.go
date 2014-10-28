@@ -2,11 +2,13 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"github.com/docopt/docopt-go"
+	"github.com/howeyc/gopass"
 	"github.com/jcelliott/lumber"
 	"os"
 	"regexp"
-	"runtime"
+	//"runtime"
 	"strings"
 )
 
@@ -32,16 +34,46 @@ const (
 	ServiceStatusStarted = iota
 )
 
+func updateOptions(service Service, options map[string]interface{}) Service {
+
+	if options["--verbose"] == true {
+		log.Level(lumber.DEBUG)
+	}
+
+	if options["start"] == true {
+		service.action = "start"
+	}
+
+	if options["status"] == true {
+		service.action = "status"
+	}
+
+	if options["stop"] == true {
+		service.action = "stop"
+	}
+
+	if _, ok := options["<servicename>"]; ok {
+		service.name = options["<servicename>"].(string)
+	}
+
+	return service
+}
+
 func usage(argv []string, exit bool) (Service, error) {
 
 	var service Service
 	var err error
 
-	usage := `Usage:
-	  sm [options] <user>@<host>
+	usage := `Service Monitoring System
+Usage:
+  sms [options] <user>@<host> <servicename> start
+  sms [options] <user>@<host> <servicename> status
+  sms [options] <user>@<host> <servicename> stop
 
-	  options:
-		-h, --help`
+ Options:
+  -h, --help     show help
+  -v, --verbose  show debug info
+`
 
 	arguments, err := docopt.Parse(usage, argv, true, "0.1", false, exit)
 
@@ -63,6 +95,8 @@ func usage(argv []string, exit bool) (Service, error) {
 			docopt.Parse(usage, []string{}, true, "", false, exit)
 		}
 	}
+
+	service = updateOptions(service, arguments)
 
 	return service, err
 }
@@ -89,12 +123,29 @@ func userHostUsage(argv []string, exit bool) (Service, error) {
 	return service, error
 }
 
+func run(service Service) {
+
+	ssh := SSHProtocolHandler{}
+	handler := ProtocolHandler(&ssh)
+
+	r := ServiceHandler(&LinuxServiceHandler{handler: handler})
+
+	r.Connect(service)
+	r.Status(service)
+	r.Disconnect(service)
+}
+
 func main() {
 
 	//fmt.Println("OS VERSION ", runtime.GOOS)
-	_, err := usage(os.Args[1:], true)
+	service, err := usage(os.Args[1:], true)
+
+	fmt.Printf("%s@%s's password:", service.user, service.host)
+
+	pass := gopass.GetPasswd()
+	service.password = string(pass)
 
 	if err == nil {
-
+		run(service)
 	}
 }
