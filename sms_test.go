@@ -209,3 +209,21 @@ func TestUsage09(t *testing.T) {
 		t.Error("Expected DEBUG")
 	}
 }
+
+// test correct parameters with sudo
+func TestUsage10(t *testing.T) {
+	// given
+	vargs := []string{"--sudo=testsudo", "testuser@testhost", "service", "stop"}
+
+	// when
+	service, err := usage(vargs, false)
+
+	// then
+	if err != nil {
+		t.Error("Expected NO Errors, got some")
+	}
+
+	if service.sudo != "testsudo" {
+		t.Error("Expected testsudo, got ", service.sudo)
+	}
+}
