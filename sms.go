@@ -9,6 +9,7 @@ import (
 	"os"
 	"regexp"
 	//"runtime"
+	"os/exec"
 	"strings"
 )
 
@@ -22,6 +23,12 @@ type Service struct {
 	name     string
 	action   string
 	sudo     string
+}
+
+type ServiceHandler interface {
+	Start(service Service, handler ProtocolHandler) int
+	Status(service Service, handler ProtocolHandler) int
+	Stop(service Service, handler ProtocolHandler) int
 }
 
 var (
@@ -128,14 +135,17 @@ func run(service Service) {
 	ssh := SSHProtocolHandler{}
 	handler := ProtocolHandler(&ssh)
 
-	r := ServiceHandler(&LinuxServiceHandler{handler: handler})
+	r := ServiceHandler(&LinuxServiceHandler{})
 
-	r.Connect(service)
-	r.Status(service)
-	r.Disconnect(service)
+	log.Info("connecting to server")
+	handler.OpenConnection(service)
+
+	r.Status(service, handler)
+
+	handler.CloseConnection()
 }
 
-func main() {
+func main2() {
 
 	//fmt.Println("OS VERSION ", runtime.GOOS)
 	service, err := usage(os.Args[1:], true)
@@ -148,4 +158,18 @@ func main() {
 	if err == nil {
 		run(service)
 	}
+}
+
+func main() {
+	path, err0 := exec.LookPath("sc")
+	if err0 != nil {
+		fmt.Println("ERRRO", err0)
+	}
+	fmt.Printf("fortune is available at %s\n", path)
+
+	out, err := exec.Command("date").CombinedOutput()
+	if err != nil {
+		fmt.Println("ERRRO", err)
+	}
+	fmt.Printf("The date is %s\n", out)
 }
