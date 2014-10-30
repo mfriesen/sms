@@ -9,7 +9,7 @@ import (
 	"os"
 	"regexp"
 	//"runtime"
-	"os/exec"
+	//"os/exec"
 	"strings"
 )
 
@@ -59,15 +59,28 @@ func updateOptions(service Service, options map[string]interface{}) Service {
 		service.action = "stop"
 	}
 
-	if _, ok := options["<servicename>"]; ok {
+	if hasKey(options, "<servicename>") {
 		service.name = options["<servicename>"].(string)
 	}
 
-	if _, ok := options["--sudo"]; ok {
+	if hasKey(options, "--sudo") {
 		service.sudo = options["--sudo"].(string)
 	}
 
 	return service
+}
+
+func hasKey(m map[string]interface{}, key string) bool {
+
+	var exists bool
+
+	if _, ok := m[key]; ok && m[key] != nil {
+		exists = true
+	} else {
+		exists = false
+	}
+
+	return exists
 }
 
 func usage(argv []string, exit bool) (Service, error) {
@@ -150,7 +163,7 @@ func run(service Service) {
 	handler.CloseConnection()
 }
 
-func main2() {
+func main() {
 
 	//fmt.Println("OS VERSION ", runtime.GOOS)
 	service, err := usage(os.Args[1:], true)
@@ -165,6 +178,7 @@ func main2() {
 	}
 }
 
+/*
 func main() {
 	path, err0 := exec.LookPath("sc")
 	if err0 != nil {
@@ -178,3 +192,4 @@ func main() {
 	}
 	fmt.Printf("The date is %s\n", out)
 }
+*/
