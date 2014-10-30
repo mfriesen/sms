@@ -108,7 +108,17 @@ func (r *LinuxToWindowsServiceHandler) Stop(service Service, handler ProtocolHan
 }
 
 func (r *LinuxToWindowsServiceHandler) IsSupported() bool {
-	return runtime.GOOS == "linux"
+
+	supported := runtime.GOOS == "linux"
+
+	if supported {
+		_, error := exec.LookPath("net")
+		if error != nil {
+			log.Fatal("cannot find net")
+		}
+	}
+
+	return supported
 }
 
 type WindowsToWindowsServiceHandler struct {
@@ -148,12 +158,14 @@ func (r *WindowsToWindowsServiceHandler) Stop(service Service, handler ProtocolH
 
 func (r *WindowsToWindowsServiceHandler) IsSupported() bool {
 
-	if runtime.GOOS == "windows" {
+	supported := runtime.GOOS == "windows"
+
+	if supported {
 		_, error := exec.LookPath("sc.exe")
 		if error != nil {
 			log.Fatal("cannot find sc.exe")
 		}
 	}
 
-	return true
+	return supported
 }
