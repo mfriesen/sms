@@ -69,8 +69,8 @@ func (r *LinuxServiceHandler) Stop(service Service, handler ProtocolHandler) int
 	return r.Status(service, handler)
 }
 
-func (r LinuxServiceHandler) IsSupported() bool {
-	return true
+func (r *LinuxServiceHandler) IsSupported() bool {
+	return runtime.GOOS == "linux"
 }
 
 type LinuxToWindowsServiceHandler struct {
@@ -99,7 +99,7 @@ func (r *LinuxToWindowsServiceHandler) Status(service Service, handler ProtocolH
 	return status
 }
 
-func (r LinuxToWindowsServiceHandler) Stop(service Service, handler ProtocolHandler) int {
+func (r *LinuxToWindowsServiceHandler) Stop(service Service, handler ProtocolHandler) int {
 
 	cmd := fmt.Sprintf("net rpc service stop %s -I %s -U %s%%%s", service.name, service.host, service.user, service.password)
 	handler.Run(cmd)
@@ -107,8 +107,8 @@ func (r LinuxToWindowsServiceHandler) Stop(service Service, handler ProtocolHand
 	return r.Status(service, handler)
 }
 
-func (r LinuxToWindowsServiceHandler) IsSupported() bool {
-	return true
+func (r *LinuxToWindowsServiceHandler) IsSupported() bool {
+	return runtime.GOOS == "linux"
 }
 
 type WindowsToWindowsServiceHandler struct {
