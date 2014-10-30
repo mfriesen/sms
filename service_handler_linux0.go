@@ -65,3 +65,7 @@ func (r *LinuxServiceHandler) Stop(service Service, handler ProtocolHandler) int
 
 	return r.Status(service, handler)
 }
+
+func (r LinuxServiceHandler) IsSupported() bool {
+	return true
+}

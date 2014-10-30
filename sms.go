@@ -7,9 +7,9 @@ import (
 	"github.com/howeyc/gopass"
 	"github.com/jcelliott/lumber"
 	"os"
+	"os/exec"
 	"regexp"
-	//"runtime"
-	//"os/exec"
+	"runtime"
 	"strings"
 )
 
@@ -29,6 +29,7 @@ type ServiceHandler interface {
 	Start(service Service, handler ProtocolHandler) int
 	Status(service Service, handler ProtocolHandler) int
 	Stop(service Service, handler ProtocolHandler) int
+	IsSupported() bool
 }
 
 var (
@@ -163,7 +164,7 @@ func run(service Service) {
 	handler.CloseConnection()
 }
 
-func main() {
+func main2() {
 
 	//fmt.Println("OS VERSION ", runtime.GOOS)
 	service, err := usage(os.Args[1:], true)
@@ -178,8 +179,8 @@ func main() {
 	}
 }
 
-/*
 func main() {
+	fmt.Println("OS VERSION ", runtime.GOOS)
 	path, err0 := exec.LookPath("sc")
 	if err0 != nil {
 		fmt.Println("ERRRO", err0)
@@ -192,4 +193,3 @@ func main() {
 	}
 	fmt.Printf("The date is %s\n", out)
 }
-*/

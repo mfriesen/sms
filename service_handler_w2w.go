@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"os/exec"
+	"runtime"
 	"strings"
 )
 
@@ -32,10 +34,22 @@ func (r *WindowsToWindowsServiceHandler) Status(service Service, handler Protoco
 	return status
 }
 
-func (r WindowsToWindowsServiceHandler) Stop(service Service, handler ProtocolHandler) int {
+func (r *WindowsToWindowsServiceHandler) Stop(service Service, handler ProtocolHandler) int {
 
 	cmd := fmt.Sprintf("sc \\\\%s stop %s", service.host, service.name)
 	handler.Run(cmd)
 
 	return r.Status(service, handler)
+}
+
+func (r *WindowsToWindowsServiceHandler) IsSupported() bool {
+
+	if runtime.GOOS == "windows" {
+		_, error := exec.LookPath("sc.exe")
+		if error != nil {
+			log.Fatal("cannot find sc.exe")
+		}
+	}
+
+	return true
 }

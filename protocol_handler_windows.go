@@ -1,10 +1,11 @@
 package main
 
 import (
-//"code.google.com/p/go.crypto/ssh"
-//"fmt"
-//"io/ioutil"
-//"strings"
+	//"code.google.com/p/go.crypto/ssh"
+	//"fmt"
+	//"io/ioutil"
+	//"strings"
+	"os/exec"
 )
 
 type WindowsProtocolHandler struct {
@@ -17,7 +18,8 @@ func (r *WindowsProtocolHandler) Run(cmd string) string {
 
 	log.Debug("sending cmd: ", cmd)
 
-	s := "" //strings.TrimSpace(string(result))
+	s, err := exec.Command(cmd).CombinedOutput()
+
 	log.Debug("got response ", s)
 
 	return s

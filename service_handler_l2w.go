@@ -43,3 +43,7 @@ func (r LinuxToWindowsServiceHandler) Stop(service Service, handler ProtocolHand
 
 	return r.Status(service, handler)
 }
+
+func (r LinuxToWindowsServiceHandler) IsSupported() bool {
+	return true
+}
