@@ -5,14 +5,14 @@ import (
 )
 
 // Service is running with the pid 7112
-func TestLinuxServiceHandlerStatus01(t *testing.T) {
+func TestServiceExecServiceHandlerStatus01(t *testing.T) {
 
 	// given
 	mock := MockProtocolHandler{results: [10]string{"Service is running with the pid 7112"}}
 
 	handler := ProtocolHandler(&mock)
 
-	r := ServiceHandler(&LinuxServiceHandler{})
+	r := ServiceHandler(&ServiceExecServiceHandler{})
 	service := Service{
 		user:     "myuser",
 		password: "mypass",
@@ -41,14 +41,14 @@ func TestLinuxServiceHandlerStatus01(t *testing.T) {
 }
 
 // service is running (17687), with SUDO
-func TestLinuxServiceHandlerStatus02(t *testing.T) {
+func TestServiceExecServiceHandlerStatus02(t *testing.T) {
 
 	// given
 	mock := MockProtocolHandler{results: [10]string{"service is running (17687)"}}
 
 	handler := ProtocolHandler(&mock)
 
-	r := ServiceHandler(&LinuxServiceHandler{})
+	r := ServiceHandler(&ServiceExecServiceHandler{})
 	service := Service{
 		user:     "myuser",
 		password: "mypass",
@@ -78,14 +78,14 @@ func TestLinuxServiceHandlerStatus02(t *testing.T) {
 }
 
 // text return is empty
-func TestLinuxServiceHandlerStatus03(t *testing.T) {
+func TestServiceExecServiceHandlerStatus03(t *testing.T) {
 
 	// given
 	mock := MockProtocolHandler{results: [10]string{""}}
 
 	handler := ProtocolHandler(&mock)
 
-	r := ServiceHandler(&LinuxServiceHandler{})
+	r := ServiceHandler(&ServiceExecServiceHandler{})
 	service := Service{
 		user:     "myuser",
 		password: "mypass",
@@ -114,14 +114,14 @@ func TestLinuxServiceHandlerStatus03(t *testing.T) {
 }
 
 // Started Service successful
-func TestLinuxServiceHandlerStart01(t *testing.T) {
+func TestServiceExecServiceHandlerStart01(t *testing.T) {
 
 	// given
 	mock := MockProtocolHandler{results: [10]string{"Started service with pid 7112", "Service is running with the pid 7112"}}
 
 	handler := ProtocolHandler(&mock)
 
-	r := ServiceHandler(&LinuxServiceHandler{})
+	r := ServiceHandler(&ServiceExecServiceHandler{})
 	service := Service{
 		user:     "myuser",
 		password: "mypass",
@@ -154,14 +154,14 @@ func TestLinuxServiceHandlerStart01(t *testing.T) {
 }
 
 // Stopped Service successful
-func TestLinuxServiceHandlerStop01(t *testing.T) {
+func TestServiceExecServiceHandlerStop01(t *testing.T) {
 
 	// given
 	mock := MockProtocolHandler{results: [10]string{"Stopped service", "Service is stopped"}}
 
 	handler := ProtocolHandler(&mock)
 
-	r := ServiceHandler(&LinuxServiceHandler{})
+	r := ServiceHandler(&ServiceExecServiceHandler{})
 	service := Service{
 		user:     "myuser",
 		password: "mypass",
@@ -203,7 +203,7 @@ func (r *MockProtocolHandler) OpenConnection(service Service) {
 	log.Info("Mock Open connection")
 }
 
-func (r *MockProtocolHandler) Run(cmd string) string {
+func (r *MockProtocolHandler) Run(service Service, cmd string) (string, string) {
 
 	log.Info("mock sending cmd: ", cmd)
 
@@ -214,11 +214,19 @@ func (r *MockProtocolHandler) Run(cmd string) string {
 
 	log.Info("mock got response ", s)
 
-	return s
+	return s, ""
 }
 
-func (r *MockProtocolHandler) CloseConnection() {
+func (r *MockProtocolHandler) CloseConnection(service Service) {
 	log.Info("mock close connection")
+}
+
+func (r *MockProtocolHandler) IsSupported(service Service) bool {
+	return true
+}
+
+func (r *MockProtocolHandler) IsPasswordNeeded(service Service) bool {
+	return true
 }
 
 // Service is running
@@ -241,7 +249,7 @@ Configuration details:
 
 	handler := ProtocolHandler(&mock)
 
-	r := ServiceHandler(&LinuxToWindowsServiceHandler{})
+	r := ServiceHandler(&SambaServiceHandler{})
 	service := Service{
 		user:     "myuser",
 		password: "mypass",
@@ -287,7 +295,7 @@ Configuration details:
 
 	handler := ProtocolHandler(&mock)
 
-	r := ServiceHandler(&LinuxToWindowsServiceHandler{})
+	r := ServiceHandler(&SambaServiceHandler{})
 	service := Service{
 		user:     "myuser",
 		password: "mypass",
@@ -321,7 +329,7 @@ func TestLinuxToWindowsStatus03(t *testing.T) {
 
 	handler := ProtocolHandler(&mock)
 
-	r := ServiceHandler(&LinuxToWindowsServiceHandler{})
+	r := ServiceHandler(&SambaServiceHandler{})
 	service := Service{
 		user:     "myuser",
 		password: "mypass",
@@ -366,7 +374,7 @@ Configuration details:
 
 	handler := ProtocolHandler(&mock)
 
-	r := ServiceHandler(&LinuxToWindowsServiceHandler{})
+	r := ServiceHandler(&SambaServiceHandler{})
 	service := Service{
 		user:     "myuser",
 		password: "mypass",
@@ -416,7 +424,7 @@ Configuration details:
 
 	handler := ProtocolHandler(&mock)
 
-	r := ServiceHandler(&LinuxToWindowsServiceHandler{})
+	r := ServiceHandler(&SambaServiceHandler{})
 	service := Service{
 		user:     "myuser",
 		password: "mypass",
@@ -462,7 +470,7 @@ func TestWindowsToWindowsStatus01(t *testing.T) {
 
 	handler := ProtocolHandler(&mock)
 
-	r := ServiceHandler(&WindowsToWindowsServiceHandler{})
+	r := ServiceHandler(&ScExecServiceHandler{})
 	service := Service{
 		user:     "myuser",
 		password: "mypass",
@@ -502,7 +510,7 @@ func TestWindowsToWindowsStatus02(t *testing.T) {
 
 	handler := ProtocolHandler(&mock)
 
-	r := ServiceHandler(&WindowsToWindowsServiceHandler{})
+	r := ServiceHandler(&ScExecServiceHandler{})
 	service := Service{
 		user:     "myuser",
 		password: "mypass",
@@ -538,7 +546,7 @@ The specified service does not exist as an installed service.`,
 
 	handler := ProtocolHandler(&mock)
 
-	r := ServiceHandler(&WindowsToWindowsServiceHandler{})
+	r := ServiceHandler(&ScExecServiceHandler{})
 	service := Service{
 		user:     "myuser",
 		password: "mypass",
@@ -580,7 +588,7 @@ func TestWindowsToWindowsStart01(t *testing.T) {
 
 	handler := ProtocolHandler(&mock)
 
-	r := ServiceHandler(&WindowsToWindowsServiceHandler{})
+	r := ServiceHandler(&ScExecServiceHandler{})
 	service := Service{
 		user:     "myuser",
 		password: "mypass",
@@ -624,7 +632,7 @@ func TestWindowsToWindowsStop01(t *testing.T) {
 
 	handler := ProtocolHandler(&mock)
 
-	r := ServiceHandler(&WindowsToWindowsServiceHandler{})
+	r := ServiceHandler(&ScExecServiceHandler{})
 	service := Service{
 		user:     "myuser",
 		password: "mypass",
