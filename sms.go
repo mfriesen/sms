@@ -65,6 +65,12 @@ func updateOptions(service Service, options map[string]interface{}) Service {
 
 	if hasKey(options, "--sudo") {
 		service.sudo = options["--sudo"].(string)
+
+		if service.sudo == "" {
+			fmt.Printf(fmt.Sprintf("[sudo] password for %s: ", service.user))
+			pass := gopass.GetPasswd()
+			service.sudo = string(pass)
+		}
 	}
 
 	return service
