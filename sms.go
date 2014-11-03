@@ -8,8 +8,8 @@ import (
 	"github.com/jcelliott/lumber"
 	"os"
 	"os/exec"
+	"reflect"
 	"regexp"
-	"runtime"
 	"strings"
 )
 
@@ -25,13 +25,6 @@ type Service struct {
 	sudo     string
 }
 
-type ServiceHandler interface {
-	Start(service Service, handler ProtocolHandler) int
-	Status(service Service, handler ProtocolHandler) int
-	Stop(service Service, handler ProtocolHandler) int
-	IsSupported() bool
-}
-
 var (
 	log = lumber.NewConsoleLogger(lumber.WARN)
 )
@@ -41,6 +34,12 @@ const (
 	ServiceStatusStopped = iota
 	ServiceStatusStarted = iota
 )
+
+var ServiceStatus = [...]string{
+	"unknown",
+	"stopped",
+	"started",
+}
 
 func updateOptions(service Service, options map[string]interface{}) Service {
 
@@ -151,45 +150,83 @@ func userHostUsage(argv []string, exit bool) (Service, error) {
 
 func run(service Service) {
 
-	ssh := SSHProtocolHandler{}
-	handler := ProtocolHandler(&ssh)
+	completed := false
+	protocols := [2]ProtocolHandler{
+		ProtocolHandler(&SSHProtocolHandler{}),
+		ProtocolHandler(&WindowsProtocolHandler{}),
+	}
 
-	r := ServiceHandler(&LinuxServiceHandler{})
+	handlers := [3]ServiceHandler{
+		ServiceHandler(&ServiceExecServiceHandler{}),
+		ServiceHandler(&SambaServiceHandler{}),
+		ServiceHandler(&ScExecServiceHandler{})}
 
-	log.Info("connecting to server")
-	handler.OpenConnection(service)
+	for _, protocol := range protocols {
 
-	r.Status(service, handler)
+		supported := protocol.IsSupported(service)
+		log.Debug("checking protocol support for %s ... is supported %t", reflect.TypeOf(protocol), supported)
 
-	handler.CloseConnection()
+		if supported {
+
+			if protocol.IsPasswordNeeded(service) && service.password == "" {
+
+				fmt.Printf(fmt.Sprintf("%s@%s's Password: ", service.user, service.host))
+				pass := gopass.GetPasswd()
+				service.password = string(pass)
+			}
+
+			protocol.OpenConnection(service)
+
+			for _, handler := range handlers {
+
+				handler_supported := handler.IsSupported(protocol)
+				log.Debug("checking protocol support for %s ... %t", reflect.TypeOf(handler), handler_supported)
+
+				if handler_supported {
+
+					status := ServiceStatusUnknown
+
+					if service.action == "status" {
+						status = handler.Status(service, protocol)
+					} else if service.action == "start" {
+						status = handler.Start(service, protocol)
+					} else if service.action == "stop" {
+						status = handler.Stop(service, protocol)
+					}
+
+					fmt.Println(fmt.Sprintf("service %s is %s", service.name, ServiceStatus[status]))
+
+					completed = true
+					break
+				}
+			}
+
+			protocol.CloseConnection(service)
+		}
+
+		if completed {
+			break
+		}
+	}
 }
 
-func main2() {
+func main() {
 
-	//fmt.Println("OS VERSION ", runtime.GOOS)
 	service, err := usage(os.Args[1:], true)
-
-	fmt.Printf("%s@%s's password:", service.user, service.host)
-
-	pass := gopass.GetPasswd()
-	service.password = string(pass)
 
 	if err == nil {
 		run(service)
 	}
 }
 
-func main() {
-	fmt.Println("OS VERSION ", runtime.GOOS)
-	path, err0 := exec.LookPath("sc")
-	if err0 != nil {
-		fmt.Println("ERRRO", err0)
-	}
-	fmt.Printf("fortune is available at %s\n", path)
+func isFileFound(file string) bool {
 
-	out, err := exec.Command("date").CombinedOutput()
-	if err != nil {
-		fmt.Println("ERRRO", err)
+	_, error := exec.LookPath(file)
+	supported := error == nil
+
+	if error != nil {
+		log.Debug("cannot find '%s' executable ", file)
 	}
-	fmt.Printf("The date is %s\n", out)
+
+	return supported
 }

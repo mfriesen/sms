@@ -3,32 +3,38 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"os/exec"
+	"github.com/jcelliott/lumber"
 	"regexp"
-	"runtime"
 	"strings"
 )
 
-type LinuxServiceHandler struct {
+type ServiceHandler interface {
+	Start(service Service, handler ProtocolHandler) int
+	Status(service Service, handler ProtocolHandler) int
+	Stop(service Service, handler ProtocolHandler) int
+	IsSupported(handler ProtocolHandler) bool
 }
 
-func (r *LinuxServiceHandler) Start(service Service, handler ProtocolHandler) int {
+type ServiceExecServiceHandler struct {
+}
+
+func (r *ServiceExecServiceHandler) Start(service Service, protocol ProtocolHandler) int {
 	log.Info("starting %s service", service.name)
 
 	service.action = "start"
-	r.RunAction(service, handler)
+	r.RunAction(service, protocol)
 
-	return r.Status(service, handler)
+	return r.Status(service, protocol)
 }
 
-func (r *LinuxServiceHandler) Status(service Service, handler ProtocolHandler) int {
+func (r *ServiceExecServiceHandler) Status(service Service, protocol ProtocolHandler) int {
 
 	log.Info("determining service %s status", service.name)
 
 	service.action = "status"
 	status := ServiceStatusUnknown
 
-	text := r.RunAction(service, handler)
+	text := r.RunAction(service, protocol)
 
 	if len(text) > 0 {
 
@@ -44,7 +50,7 @@ func (r *LinuxServiceHandler) Status(service Service, handler ProtocolHandler) i
 	return status
 }
 
-func (r *LinuxServiceHandler) RunAction(service Service, handler ProtocolHandler) string {
+func (r *ServiceExecServiceHandler) RunAction(service Service, protocol ProtocolHandler) string {
 
 	var buffer bytes.Buffer
 
@@ -54,118 +60,114 @@ func (r *LinuxServiceHandler) RunAction(service Service, handler ProtocolHandler
 		buffer.WriteString(fmt.Sprintf("sudo service %s %s", service.name, service.action))
 	}
 
-	text := handler.Run(buffer.String())
+	stdout, stderr := protocol.Run(service, buffer.String())
 
-	return text
+	if strings.Contains(stderr, "sudo:") {
+		log.Fatal("'--sudo' parameter required for this service")
+	}
+
+	return stdout
 }
 
-func (r *LinuxServiceHandler) Stop(service Service, handler ProtocolHandler) int {
+func (r *ServiceExecServiceHandler) Stop(service Service, protocol ProtocolHandler) int {
 	log.Info("stopping %s service", service.name)
 
 	service.action = "stop"
 
-	r.RunAction(service, handler)
+	r.RunAction(service, protocol)
 
-	return r.Status(service, handler)
+	return r.Status(service, protocol)
 }
 
-func (r *LinuxServiceHandler) IsSupported() bool {
-	return runtime.GOOS == "linux"
+func (r *ServiceExecServiceHandler) IsSupported(protocol ProtocolHandler) bool {
+	return isCommandSupported(protocol, "service")
 }
 
-type LinuxToWindowsServiceHandler struct {
+func isCommandSupported(protocol ProtocolHandler, cmd string) bool {
+
+	log.Debug("looking for executable '%s'", cmd)
+	level := log.GetLevel()
+	log.Level(lumber.WARN)
+	stdout, stderr := protocol.Run(Service{}, cmd)
+
+	log.Level(level)
+
+	return !(strings.Contains(stdout, "not found") || strings.Contains(stderr, "not found"))
 }
 
-func (r *LinuxToWindowsServiceHandler) Start(service Service, handler ProtocolHandler) int {
+type SambaServiceHandler struct {
+}
+
+func (r *SambaServiceHandler) Start(service Service, protocol ProtocolHandler) int {
 	cmd := fmt.Sprintf("net rpc service start %s -I %s -U %s%%%s", service.name, service.host, service.user, service.password)
-	handler.Run(cmd)
+	protocol.Run(service, cmd)
 
-	return r.Status(service, handler)
+	return r.Status(service, protocol)
 }
 
-func (r *LinuxToWindowsServiceHandler) Status(service Service, handler ProtocolHandler) int {
+func (r *SambaServiceHandler) Status(service Service, protocol ProtocolHandler) int {
 
 	status := ServiceStatusUnknown
 
 	cmd := fmt.Sprintf("net rpc service status %s -I %s -U %s%%%s", service.name, service.host, service.user, service.password)
-	text := handler.Run(cmd)
+	stdout, _ := protocol.Run(service, cmd)
 
-	if strings.Contains(text, "is running") {
+	if strings.Contains(stdout, "is running") {
 		status = ServiceStatusStarted
-	} else if strings.Contains(text, "is stopped") {
+	} else if strings.Contains(stdout, "is stopped") {
 		status = ServiceStatusStopped
 	}
 
 	return status
 }
 
-func (r *LinuxToWindowsServiceHandler) Stop(service Service, handler ProtocolHandler) int {
+func (r *SambaServiceHandler) Stop(service Service, protocol ProtocolHandler) int {
 
 	cmd := fmt.Sprintf("net rpc service stop %s -I %s -U %s%%%s", service.name, service.host, service.user, service.password)
-	handler.Run(cmd)
+	protocol.Run(service, cmd)
 
-	return r.Status(service, handler)
+	return r.Status(service, protocol)
 }
 
-func (r *LinuxToWindowsServiceHandler) IsSupported() bool {
-
-	supported := runtime.GOOS == "linux"
-
-	if supported {
-		_, error := exec.LookPath("net")
-		if error != nil {
-			log.Fatal("cannot find net")
-		}
-	}
-
-	return supported
+func (r *SambaServiceHandler) IsSupported(protocol ProtocolHandler) bool {
+	return isCommandSupported(protocol, "net")
 }
 
-type WindowsToWindowsServiceHandler struct {
+type ScExecServiceHandler struct {
 }
 
-func (r *WindowsToWindowsServiceHandler) Start(service Service, handler ProtocolHandler) int {
+func (r *ScExecServiceHandler) Start(service Service, protocol ProtocolHandler) int {
 
 	cmd := fmt.Sprintf("sc \\\\%s start %s", service.host, service.name)
-	handler.Run(cmd)
+	protocol.Run(service, cmd)
 
-	return r.Status(service, handler)
+	return r.Status(service, protocol)
 }
 
-func (r *WindowsToWindowsServiceHandler) Status(service Service, handler ProtocolHandler) int {
+func (r *ScExecServiceHandler) Status(service Service, protocol ProtocolHandler) int {
 
 	status := ServiceStatusUnknown
 	cmd := fmt.Sprintf("sc \\\\%s query %s", service.host, service.name)
 
-	text := handler.Run(cmd)
+	stdout, _ := protocol.Run(service, cmd)
 
-	if strings.Contains(text, "RUNNING") {
+	if strings.Contains(stdout, "RUNNING") {
 		status = ServiceStatusStarted
-	} else if strings.Contains(text, "STOPPED") {
+	} else if strings.Contains(stdout, "STOPPED") {
 		status = ServiceStatusStopped
 	}
 
 	return status
 }
 
-func (r *WindowsToWindowsServiceHandler) Stop(service Service, handler ProtocolHandler) int {
+func (r *ScExecServiceHandler) Stop(service Service, protocol ProtocolHandler) int {
 
 	cmd := fmt.Sprintf("sc \\\\%s stop %s", service.host, service.name)
-	handler.Run(cmd)
+	protocol.Run(service, cmd)
 
-	return r.Status(service, handler)
+	return r.Status(service, protocol)
 }
 
-func (r *WindowsToWindowsServiceHandler) IsSupported() bool {
-
-	supported := runtime.GOOS == "windows"
-
-	if supported {
-		_, error := exec.LookPath("sc.exe")
-		if error != nil {
-			log.Fatal("cannot find sc.exe")
-		}
-	}
-
-	return supported
+func (r *ScExecServiceHandler) IsSupported(protocol ProtocolHandler) bool {
+	return isCommandSupported(protocol, "sc.exe")
 }
