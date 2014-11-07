@@ -3,7 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"github.com/jcelliott/lumber"
+	//"github.com/jcelliott/lumber"
 	"regexp"
 	"strings"
 )
@@ -38,11 +38,12 @@ func (r *ServiceExecServiceHandler) Status(service Service, protocol ProtocolHan
 
 	if len(text) > 0 {
 
-		rp := regexp.MustCompile("[0-9]+")
+		rp0 := regexp.MustCompile("( start)|( running)")
+		rp1 := regexp.MustCompile("( stop)")
 
-		if rp.MatchString(text) {
+		if rp0.MatchString(text) {
 			status = ServiceStatusStarted
-		} else {
+		} else if rp1.MatchString(text) {
 			status = ServiceStatusStopped
 		}
 	}
@@ -60,9 +61,9 @@ func (r *ServiceExecServiceHandler) RunAction(service Service, protocol Protocol
 		buffer.WriteString(fmt.Sprintf("sudo service %s %s", service.name, service.action))
 	}
 
-	stdout, stderr := protocol.Run(service, buffer.String())
+	stdout, err := protocol.Run(service, buffer.String())
 
-	if strings.Contains(stderr, "sudo:") {
+	if err != nil && strings.Contains(err.Error(), "sudo:") {
 		log.Fatal("'--sudo' parameter required for this service")
 	}
 
@@ -86,13 +87,16 @@ func (r *ServiceExecServiceHandler) IsSupported(protocol ProtocolHandler) bool {
 func isCommandSupported(protocol ProtocolHandler, cmd string) bool {
 
 	log.Debug("looking for executable '%s'", cmd)
-	level := log.GetLevel()
-	log.Level(lumber.WARN)
-	stdout, stderr := protocol.Run(Service{}, cmd)
 
-	log.Level(level)
+	_, err := protocol.Run(Service{}, cmd)
 
-	return !(strings.Contains(stdout, "not found") || strings.Contains(stderr, "not found"))
+	return err == nil
+}
+
+func checkCommandSupported(stdout string, stderr string) bool {
+	return !(strings.Contains(stdout, "not found") || strings.Contains(stderr, "not found") ||
+		strings.Contains(stdout, "not recognized") || strings.Contains(stderr, "not recognized") ||
+		strings.Contains(stdout, "not exist") || strings.Contains(stderr, "not exist"))
 }
 
 type SambaServiceHandler struct {
@@ -169,5 +173,5 @@ func (r *ScExecServiceHandler) Stop(service Service, protocol ProtocolHandler) i
 }
 
 func (r *ScExecServiceHandler) IsSupported(protocol ProtocolHandler) bool {
-	return isCommandSupported(protocol, "sc.exe")
+	return isCommandSupported(protocol, "sc query")
 }

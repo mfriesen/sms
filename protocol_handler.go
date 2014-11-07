@@ -1,19 +1,23 @@
 package main
 
+// https://github.com/inatus/ssh-client-go/blob/master/main.go
 import (
+	"bytes"
 	"code.google.com/p/go.crypto/ssh"
+	"errors"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"os/exec"
+	"runtime"
 	"strings"
+	"time"
 )
 
 type ProtocolHandler interface {
 	IsSupported(service Service) bool
 	IsPasswordNeeded(service Service) bool
 	OpenConnection(service Service)
-	Run(service Service, cmd string) (string, string)
+	Run(service Service, cmd string) (string, error)
 	CloseConnection(service Service)
 }
 
@@ -23,8 +27,13 @@ type SSHProtocolHandler struct {
 
 func (r *SSHProtocolHandler) IsSupported(service Service) bool {
 	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%s", service.host, service.port))
-	defer conn.Close()
-	return err == nil
+
+	supported := err == nil
+	if supported {
+		defer conn.Close()
+	}
+
+	return supported
 }
 
 func (r *SSHProtocolHandler) IsPasswordNeeded(service Service) bool {
@@ -39,7 +48,7 @@ func (r *SSHProtocolHandler) OpenConnection(service Service) {
 			ssh.Password(service.password),
 		},
 	}
-
+	// TODO handle wrong username / password
 	log.Debug("opening connection to %s:%s: ", service.host, service.port)
 
 	conn, error := ssh.Dial("tcp", fmt.Sprintf("%s:%s", service.host, service.port), config)
@@ -49,25 +58,78 @@ func (r *SSHProtocolHandler) OpenConnection(service Service) {
 	}
 }
 
-func (r *SSHProtocolHandler) Run(service Service, cmd string) (string, string) {
+func (r *SSHProtocolHandler) Run(service Service, cmd string) (string, error) {
 
-	log.Debug("sending cmd: %s", strings.Replace(cmd, service.sudo, "******", -1))
+	var stdout, stderr, response bytes.Buffer
+
+	cmdString := cmd
+	if service.sudo != "" {
+		cmdString = strings.Replace(cmd, service.sudo, "******", -1)
+	}
+
+	log.Debug("sending cmd: %s", cmdString)
 
 	session, _ := r.client.NewSession()
 	defer session.Close()
 
-	so, _ := session.StdoutPipe()
+	session.Stdout = &stdout
+	session.Stderr = &stderr
 
-	stderr, _ := session.CombinedOutput(cmd)
-	stdout, _ := ioutil.ReadAll(so)
+	in, _ := session.StdinPipe()
 
-	sstderr := strings.TrimSpace(string(stderr))
-	sstdout := strings.TrimSpace(string(stdout))
+	// Set up terminal modes
+	modes := ssh.TerminalModes{
+		ssh.ECHO:          0,     // disable echoing
+		ssh.TTY_OP_ISPEED: 14400, // input speed = 14.4kbaud
+		ssh.TTY_OP_OSPEED: 14400, // output speed = 14.4kbaud
+	}
+	// Request pseudo terminal
+	if err := session.RequestPty("xterm", 80, 40, modes); err != nil {
+		log.Fatal("request for pseudo terminal failed: %s", err)
+	}
 
-	log.Debug("got stdout response %s", sstdout)
-	log.Debug("got stderr response %s", sstderr)
+	// Start remote shell
+	if err := session.Shell(); err != nil {
+		log.Fatal("failed to start shell: %s", err)
+	}
 
-	return sstdout, sstderr
+	// login text
+	bytes, err := r.ReadBuffer(&stdout)
+	//response.WriteString(string(bytes))
+
+	fmt.Fprintln(in, cmd)
+	bytes, err = r.ReadBuffer(&stdout)
+	response.WriteString(string(bytes))
+
+	log.Debug("receive %s", response.String())
+
+	return response.String(), err
+}
+
+func (r *SSHProtocolHandler) ReadBuffer(stdout *bytes.Buffer) ([]byte, error) {
+
+	len := -1
+	count := 0
+	delay := 100
+
+	for {
+		time.Sleep(time.Duration(delay) * time.Millisecond)
+
+		stdoutLen := stdout.Len()
+
+		if stdoutLen == len && count > 0 {
+			return stdout.ReadBytes(0)
+		} else {
+			len = stdoutLen
+		}
+
+		delay *= 2
+		count += 1
+
+		if count > 10 {
+			return nil, errors.New("ReadBuffer timeout")
+		}
+	}
 }
 
 func (r *SSHProtocolHandler) CloseConnection(service Service) {
@@ -81,7 +143,7 @@ type WindowsProtocolHandler struct {
 }
 
 func (r *WindowsProtocolHandler) IsSupported(service Service) bool {
-	return isFileFound("net") || isFileFound("sc.exe")
+	return strings.Contains(runtime.GOOS, "windows")
 }
 
 func (r *WindowsProtocolHandler) IsPasswordNeeded(service Service) bool {
@@ -91,15 +153,21 @@ func (r *WindowsProtocolHandler) IsPasswordNeeded(service Service) bool {
 func (r *WindowsProtocolHandler) OpenConnection(service Service) {
 }
 
-func (r *WindowsProtocolHandler) Run(service Service, cmd string) (string, string) {
+func (r *WindowsProtocolHandler) Run(service Service, cmd string) (string, error) {
 
 	log.Debug("sending cmd: ", cmd)
 
-	s, _ := exec.Command(cmd).CombinedOutput()
+	parts := strings.Fields(cmd)
+	head := parts[0]
+	parts = parts[1:len(parts)]
 
-	log.Debug("got response ", s)
+	s, err := exec.Command(head, parts...).CombinedOutput()
+	//s, err := exec.Command("sh", "-c", cmd).CombinedOutput()
 
-	return string(s), string(s)
+	log.Debug("got response ", string(s))
+	log.Debug("got error ", err)
+
+	return string(s), err
 }
 
 func (r *WindowsProtocolHandler) CloseConnection(service Service) {

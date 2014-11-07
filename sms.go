@@ -6,6 +6,7 @@ import (
 	"github.com/docopt/docopt-go"
 	"github.com/howeyc/gopass"
 	"github.com/jcelliott/lumber"
+	//	"io"
 	"os"
 	"os/exec"
 	"reflect"
@@ -157,15 +158,16 @@ func userHostUsage(argv []string, exit bool) (Service, error) {
 func run(service Service) {
 
 	completed := false
-	protocols := [2]ProtocolHandler{
+	protocols := [...]ProtocolHandler{
 		ProtocolHandler(&SSHProtocolHandler{}),
 		ProtocolHandler(&WindowsProtocolHandler{}),
 	}
 
-	handlers := [3]ServiceHandler{
+	handlers := [...]ServiceHandler{
 		ServiceHandler(&ServiceExecServiceHandler{}),
+		ServiceHandler(&ScExecServiceHandler{}),
 		ServiceHandler(&SambaServiceHandler{}),
-		ServiceHandler(&ScExecServiceHandler{})}
+	}
 
 	for _, protocol := range protocols {
 
@@ -186,7 +188,7 @@ func run(service Service) {
 			for _, handler := range handlers {
 
 				handler_supported := handler.IsSupported(protocol)
-				log.Debug("checking protocol support for %s ... %t", reflect.TypeOf(handler), handler_supported)
+				log.Debug("checking handler support for %s ... %t", reflect.TypeOf(handler), handler_supported)
 
 				if handler_supported {
 
@@ -205,6 +207,7 @@ func run(service Service) {
 					completed = true
 					break
 				}
+
 			}
 
 			protocol.CloseConnection(service)

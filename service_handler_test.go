@@ -21,9 +21,6 @@ func TestServiceExecServiceHandlerStatus01(t *testing.T) {
 		action:   "status"}
 
 	// when
-	//r.Connect(service)
-	//defer r.Disconnect(service)
-
 	result := r.Status(service, handler)
 
 	// then
@@ -58,9 +55,6 @@ func TestServiceExecServiceHandlerStatus02(t *testing.T) {
 		action:   "status"}
 
 	// when
-	//r.Connect(service)
-	//defer r.Disconnect(service)
-
 	result := r.Status(service, handler)
 
 	// then
@@ -94,9 +88,6 @@ func TestServiceExecServiceHandlerStatus03(t *testing.T) {
 		action:   "status"}
 
 	// when
-	//r.Connect(service)
-	//defer r.Disconnect(service)
-
 	result := r.Status(service, handler)
 
 	// then
@@ -130,9 +121,6 @@ func TestServiceExecServiceHandlerStart01(t *testing.T) {
 		action:   "status"}
 
 	// when
-	//r.Connect(service)
-	//defer r.Disconnect(service)
-
 	result := r.Start(service, handler)
 
 	// then
