@@ -61,11 +61,7 @@ func (r *ServiceExecServiceHandler) RunAction(service Service, protocol Protocol
 		buffer.WriteString(fmt.Sprintf("sudo service %s %s", service.name, service.action))
 	}
 
-	stdout, err := protocol.Run(service, buffer.String())
-
-	if err != nil && strings.Contains(err.Error(), "sudo:") {
-		log.Fatal("'--sudo' parameter required for this service")
-	}
+	stdout, _ := protocol.Run(service, buffer.String())
 
 	return stdout
 }

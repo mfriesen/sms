@@ -6,6 +6,7 @@ import (
 	"code.google.com/p/go.crypto/ssh"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"os/exec"
 	"runtime"
@@ -102,6 +103,14 @@ func (r *SSHProtocolHandler) Run(service Service, cmd string) (string, error) {
 	response.WriteString(string(bytes))
 
 	log.Debug("receive %s", response.String())
+
+	if err == io.EOF {
+		err = nil
+	}
+
+	if err != nil {
+		log.Debug("received error %s", err.Error())
+	}
 
 	return response.String(), err
 }
