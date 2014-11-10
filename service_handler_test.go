@@ -191,7 +191,7 @@ func (r *MockProtocolHandler) OpenConnection(service Service) {
 	log.Info("Mock Open connection")
 }
 
-func (r *MockProtocolHandler) Run(service Service, cmd string) (string, string) {
+func (r *MockProtocolHandler) Run(service Service, cmd string) (string, error) {
 
 	log.Info("mock sending cmd: ", cmd)
 
@@ -202,7 +202,7 @@ func (r *MockProtocolHandler) Run(service Service, cmd string) (string, string) 
 
 	log.Info("mock got response ", s)
 
-	return s, ""
+	return s, nil
 }
 
 func (r *MockProtocolHandler) CloseConnection(service Service) {

@@ -1,9 +1,7 @@
 package main
 
-// https://github.com/inatus/ssh-client-go/blob/master/main.go
 import (
 	"bytes"
-	"code.google.com/p/go.crypto/ssh"
 	"errors"
 	"fmt"
 	"io"
@@ -12,6 +10,8 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	"code.google.com/p/go.crypto/ssh"
 )
 
 type ProtocolHandler interface {

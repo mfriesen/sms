@@ -1,17 +1,17 @@
 package main
 
 import (
-	"errors"
 	"fmt"
+
 	"github.com/docopt/docopt-go"
 	"github.com/howeyc/gopass"
 	"github.com/jcelliott/lumber"
-	//	"io"
+
 	"os"
 	"os/exec"
+	"os/user"
 	"reflect"
 	"regexp"
-	"strings"
 )
 
 const DEFAULT_PORT string = "22"
@@ -48,6 +48,34 @@ func updateOptions(service Service, options map[string]interface{}) Service {
 		log.Level(lumber.DEBUG)
 	}
 
+	if hasKey(options, "--user") {
+		service.user = options["--user"].(string)
+	} else {
+		usr, _ := user.Current()
+		service.user = usr.Username
+	}
+
+	if hasKey(options, "<host>") {
+
+		host := options["<host>"].(string)
+
+		rp := regexp.MustCompile("[@:]")
+		strs := rp.Split(host, -1)
+
+		if len(strs) == 3 {
+			service.host = strs[1]
+			service.user = strs[0]
+			service.port = strs[2]
+		} else if len(strs) == 2 {
+			service.host = strs[1]
+			service.user = strs[0]
+			service.port = DEFAULT_PORT
+		} else {
+			service.host = host
+			service.port = DEFAULT_PORT
+		}
+	}
+
 	if options["start"] == true {
 		service.action = "start"
 	}
@@ -62,6 +90,10 @@ func updateOptions(service Service, options map[string]interface{}) Service {
 
 	if hasKey(options, "<servicename>") {
 		service.name = options["<servicename>"].(string)
+	}
+
+	if hasKey(options, "--password") {
+		service.password = options["--password"].(string)
 	}
 
 	if hasKey(options, "--sudo") {
@@ -97,11 +129,13 @@ func usage(argv []string, exit bool) (Service, error) {
 
 	usage := `Service Monitoring System
 Usage:
-  sms [options] <user>@<host> <servicename> start
-  sms [options] <user>@<host> <servicename> status
-  sms [options] <user>@<host> <servicename> stop
+  sms [options] <host> <servicename> start
+  sms [options] <host> <servicename> status
+  sms [options] <host> <servicename> stop
 
  Options:
+  --user=userid  userid
+  --password=password  password
   --sudo=sudopw  sudo password
   -h, --help     show help
   -v, --verbose  show debug info
@@ -109,50 +143,9 @@ Usage:
 
 	arguments, err := docopt.Parse(usage, argv, true, "0.1", false, exit)
 
-	if _, ok := arguments["<user>@<host>"]; err == nil && ok {
-
-		var userhost string = arguments["<user>@<host>"].(string)
-
-		if strings.Contains(userhost, "@") {
-
-			rp := regexp.MustCompile("[@:]")
-			split := rp.Split(userhost, -1)
-
-			service, err = userHostUsage(split, exit)
-		} else {
-			err = errors.New("missing '@'")
-		}
-
-		if err != nil { // invalid <user>@<host>
-			docopt.Parse(usage, []string{}, true, "", false, exit)
-		}
-	}
-
 	service = updateOptions(service, arguments)
 
 	return service, err
-}
-
-func userHostUsage(argv []string, exit bool) (Service, error) {
-	var service Service
-
-	usage := `Usage:
-	  sm <user> <host> [<port>]`
-
-	arguments, error := docopt.Parse(usage, argv, true, "", false, exit)
-
-	if error == nil {
-
-		if arguments["<port>"] == nil {
-			arguments["<port>"] = DEFAULT_PORT
-		}
-
-		service = Service{user: arguments["<user>"].(string),
-			host: arguments["<host>"].(string),
-			port: arguments["<port>"].(string)}
-	}
-
-	return service, error
 }
 
 func run(service Service) {

@@ -21,7 +21,7 @@ func TestUsage01(t *testing.T) {
 // test correct STOP parameters entered
 func TestUsage02(t *testing.T) {
 	// given
-	vargs := []string{"testuser@testhost", "servicename", "stop"}
+	vargs := []string{"testhost", "servicename", "stop"}
 
 	// when
 	service, err := usage(vargs, false)
@@ -29,10 +29,6 @@ func TestUsage02(t *testing.T) {
 	// then
 	if err != nil {
 		t.Error("Expected NO Errors, got some")
-	}
-
-	if service.user != "testuser" {
-		t.Error("Expected <user> testuser, got ", service.user)
 	}
 
 	if service.host != "testhost" {
@@ -55,7 +51,7 @@ func TestUsage02(t *testing.T) {
 // test correct STATUS parameters entered
 func TestUsage03(t *testing.T) {
 	// given
-	vargs := []string{"testuser@testhost", "servicename", "status"}
+	vargs := []string{"testhost", "servicename", "status"}
 
 	// when
 	service, err := usage(vargs, false)
@@ -63,10 +59,6 @@ func TestUsage03(t *testing.T) {
 	// then
 	if err != nil {
 		t.Error("Expected NO Errors, got some")
-	}
-
-	if service.user != "testuser" {
-		t.Error("Expected <user> testuser, got ", service.user)
 	}
 
 	if service.host != "testhost" {
@@ -89,7 +81,7 @@ func TestUsage03(t *testing.T) {
 // test correct START parameters entered
 func TestUsage04(t *testing.T) {
 	// given
-	vargs := []string{"testuser@testhost", "servicename", "start"}
+	vargs := []string{"testhost", "servicename", "start"}
 
 	// when
 	service, err := usage(vargs, false)
@@ -97,10 +89,6 @@ func TestUsage04(t *testing.T) {
 	// then
 	if err != nil {
 		t.Error("Expected NO Errors, got some")
-	}
-
-	if service.user != "testuser" {
-		t.Error("Expected <user> testuser, got ", service.user)
 	}
 
 	if service.host != "testhost" {
@@ -225,5 +213,43 @@ func TestUsage10(t *testing.T) {
 
 	if service.sudo != "testsudo" {
 		t.Error("Expected testsudo, got ", service.sudo)
+	}
+}
+
+// test --user, --password parameters
+func TestUsage11(t *testing.T) {
+	// given
+	vargs := []string{"--user=testuser", "--password=password", "testhost", "servicename", "stop"}
+
+	// when
+	service, err := usage(vargs, false)
+
+	// then
+	if err != nil {
+		t.Error("Expected NO Errors, got some")
+	}
+
+	if service.host != "testhost" {
+		t.Error("Expected <host> testhost, got ", service.host)
+	}
+
+	if service.port != "22" {
+		t.Error("Expected <port> 22, got ", service.port)
+	}
+
+	if service.action != "stop" {
+		t.Error("Expected <action> stop, got ", service.action)
+	}
+
+	if service.name != "servicename" {
+		t.Error("Expected servicename, got ", service.name)
+	}
+
+	if service.user != "testuser" {
+		t.Error("Expected testuser, got ", service.user)
+	}
+
+	if service.password != "password" {
+		t.Error("Expected password, got ", service.password)
 	}
 }
