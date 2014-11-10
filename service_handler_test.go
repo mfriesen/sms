@@ -158,9 +158,6 @@ func TestServiceExecServiceHandlerStop01(t *testing.T) {
 		action:   "status"}
 
 	// when
-	//r.Connect(service)
-	//defer r.Disconnect(service)
-
 	result := r.Stop(service, handler)
 
 	// then
@@ -187,8 +184,9 @@ type MockProtocolHandler struct {
 	run     int
 }
 
-func (r *MockProtocolHandler) OpenConnection(service Service) {
+func (r *MockProtocolHandler) OpenConnection(service Service) error {
 	log.Info("Mock Open connection")
+	return nil
 }
 
 func (r *MockProtocolHandler) Run(service Service, cmd string) (string, error) {

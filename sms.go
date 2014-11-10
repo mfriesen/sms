@@ -148,9 +148,11 @@ Usage:
 	return service, err
 }
 
-func run(service Service) {
+func run(service Service) error {
 
+	var err error
 	completed := false
+
 	protocols := [...]ProtocolHandler{
 		ProtocolHandler(&SSHProtocolHandler{}),
 		ProtocolHandler(&WindowsProtocolHandler{}),
@@ -176,40 +178,47 @@ func run(service Service) {
 				service.password = string(pass)
 			}
 
-			protocol.OpenConnection(service)
+			err = protocol.OpenConnection(service)
 
-			for _, handler := range handlers {
+			if err == nil {
+				for _, handler := range handlers {
 
-				handler_supported := handler.IsSupported(protocol)
-				log.Debug("checking handler support for %s ... %t", reflect.TypeOf(handler), handler_supported)
+					handler_supported := handler.IsSupported(protocol)
+					log.Debug("checking handler support for %s ... %t", reflect.TypeOf(handler), handler_supported)
 
-				if handler_supported {
+					if handler_supported {
 
-					status := ServiceStatusUnknown
+						status := ServiceStatusUnknown
 
-					if service.action == "status" {
-						status = handler.Status(service, protocol)
-					} else if service.action == "start" {
-						status = handler.Start(service, protocol)
-					} else if service.action == "stop" {
-						status = handler.Stop(service, protocol)
+						if service.action == "status" {
+							status = handler.Status(service, protocol)
+						} else if service.action == "start" {
+							status = handler.Start(service, protocol)
+						} else if service.action == "stop" {
+							status = handler.Stop(service, protocol)
+						}
+
+						fmt.Println(fmt.Sprintf("service %s is %s", service.name, ServiceStatus[status]))
+
+						completed = true
+						break
 					}
 
-					fmt.Println(fmt.Sprintf("service %s is %s", service.name, ServiceStatus[status]))
-
-					completed = true
-					break
 				}
 
-			}
+				protocol.CloseConnection(service)
+			} else {
 
-			protocol.CloseConnection(service)
+				completed = true
+			}
 		}
 
 		if completed {
 			break
 		}
 	}
+
+	return err
 }
 
 func main() {
@@ -217,7 +226,11 @@ func main() {
 	service, err := usage(os.Args[1:], true)
 
 	if err == nil {
-		run(service)
+		err = run(service)
+
+		if err != nil {
+			fmt.Println(err.Error())
+		}
 	}
 }
 

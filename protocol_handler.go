@@ -17,7 +17,7 @@ import (
 type ProtocolHandler interface {
 	IsSupported(service Service) bool
 	IsPasswordNeeded(service Service) bool
-	OpenConnection(service Service)
+	OpenConnection(service Service) error
 	Run(service Service, cmd string) (string, error)
 	CloseConnection(service Service)
 }
@@ -41,7 +41,7 @@ func (r *SSHProtocolHandler) IsPasswordNeeded(service Service) bool {
 	return true
 }
 
-func (r *SSHProtocolHandler) OpenConnection(service Service) {
+func (r *SSHProtocolHandler) OpenConnection(service Service) error {
 
 	config := &ssh.ClientConfig{
 		User: service.user,
@@ -57,6 +57,8 @@ func (r *SSHProtocolHandler) OpenConnection(service Service) {
 	if error == nil {
 		r.client = conn
 	}
+
+	return error
 }
 
 func (r *SSHProtocolHandler) Run(service Service, cmd string) (string, error) {
@@ -159,7 +161,8 @@ func (r *WindowsProtocolHandler) IsPasswordNeeded(service Service) bool {
 	return false
 }
 
-func (r *WindowsProtocolHandler) OpenConnection(service Service) {
+func (r *WindowsProtocolHandler) OpenConnection(service Service) error {
+	return nil
 }
 
 func (r *WindowsProtocolHandler) Run(service Service, cmd string) (string, error) {
