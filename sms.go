@@ -129,9 +129,9 @@ func usage(argv []string, exit bool) (Service, error) {
 
 	usage := `Service Monitoring System
 Usage:
-  sms [options] <host> <servicename> start
-  sms [options] <host> <servicename> status
-  sms [options] <host> <servicename> stop
+  sms [options] [user@]<host>[:port] <servicename> start
+  sms [options] [user@]<host>[:port] <servicename> status
+  sms [options] [user@]<host>[:port] <servicename> stop
 
  Options:
   --user=userid  userid
