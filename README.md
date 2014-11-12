@@ -12,6 +12,7 @@
 | Linux  | Windows  | * requires SAMBA 'net' execuable |
 
 ### Usage
+```
   sms [options] [user@]<host>[:port] <servicename> start
   sms [options] [user@]<host>[:port] <servicename> status
   sms [options] [user@]<host>[:port] <servicename> stop
@@ -22,6 +23,7 @@
   --sudo=sudopw  sudo password
   -h, --help     show help
   -v, --verbose  show debug info
+```
 
  ### Examples
 
