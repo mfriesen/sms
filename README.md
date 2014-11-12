@@ -31,11 +31,15 @@
 
  * sms myuser@myhost myservice status 
 
-Get the status of a Linux Service that requires a "sudo" password (requires the Linux Server is running SSH)
+#### Get the status of a Linux Service that requires a "sudo" password (requires the Linux Server is running SSH)
 
-* sms --sudo=MYSUDOPASSWORD myuser@myhost myservice status or sms --sudo= myuser@myhost myservice status (will prompt for a SUDO password)
+```
+sms --sudo=MYSUDOPASSWORD myuser@myhost myservice status 
+or 
+sms --sudo= myuser@myhost myservice status (will prompt for a SUDO password)
+```
 
-Get the status of a Windows Service
+#### Get the status of a Windows Service
 
 * sms myhost myservice status
 
