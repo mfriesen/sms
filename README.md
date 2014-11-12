@@ -41,7 +41,9 @@ sms --sudo= myuser@myhost myservice status (will prompt for a SUDO password)
 
 #### Get the status of a Windows Service
 
-* sms myhost myservice status
+```
+sms myhost myservice status
+```
 
 ### Contributing
 
