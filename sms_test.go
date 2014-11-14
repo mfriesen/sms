@@ -253,3 +253,33 @@ func TestUsage11(t *testing.T) {
 		t.Error("Expected password, got ", service.password)
 	}
 }
+
+// test correct RESTART parameters entered
+func TestUsage12(t *testing.T) {
+	// given
+	vargs := []string{"testhost", "servicename", "restart"}
+
+	// when
+	service, err := usage(vargs, false)
+
+	// then
+	if err != nil {
+		t.Error("Expected NO Errors, got some")
+	}
+
+	if service.host != "testhost" {
+		t.Error("Expected <host> testhost, got ", service.host)
+	}
+
+	if service.port != "22" {
+		t.Error("Expected <port> 22, got ", service.port)
+	}
+
+	if service.action != "restart" {
+		t.Error("Expected <action> restart, got ", service.action)
+	}
+
+	if service.name != "servicename" {
+		t.Error("Expected servicename, got ", service.name)
+	}
+}

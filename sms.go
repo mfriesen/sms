@@ -88,6 +88,10 @@ func updateOptions(service Service, options map[string]interface{}) Service {
 		service.action = "stop"
 	}
 
+	if options["restart"] == true {
+		service.action = "restart"
+	}
+
 	if hasKey(options, "<servicename>") {
 		service.name = options["<servicename>"].(string)
 	}
@@ -129,6 +133,7 @@ func usage(argv []string, exit bool) (Service, error) {
 
 	usage := `Service Monitoring System
 Usage:
+  sms [options] [user@]<host>[:port] <servicename> restart
   sms [options] [user@]<host>[:port] <servicename> start
   sms [options] [user@]<host>[:port] <servicename> status
   sms [options] [user@]<host>[:port] <servicename> stop
@@ -196,6 +201,13 @@ func run(service Service) error {
 							status, err = handler.Start(service, protocol)
 						} else if service.action == "stop" {
 							status, err = handler.Stop(service, protocol)
+						} else if service.action == "restart" {
+
+							status, err = handler.Stop(service, protocol)
+
+							if err == nil {
+								status, err = handler.Start(service, protocol)
+							}
 						}
 
 						if err != nil {
