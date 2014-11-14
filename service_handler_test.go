@@ -21,7 +21,7 @@ func TestServiceExecServiceHandlerStatus01(t *testing.T) {
 		action:   "status"}
 
 	// when
-	result := r.Status(service, handler)
+	result, _ := r.Status(service, handler)
 
 	// then
 	if result != ServiceStatusStarted {
@@ -55,7 +55,7 @@ func TestServiceExecServiceHandlerStatus02(t *testing.T) {
 		action:   "status"}
 
 	// when
-	result := r.Status(service, handler)
+	result, _ := r.Status(service, handler)
 
 	// then
 	if result != ServiceStatusStarted {
@@ -88,7 +88,7 @@ func TestServiceExecServiceHandlerStatus03(t *testing.T) {
 		action:   "status"}
 
 	// when
-	result := r.Status(service, handler)
+	result, _ := r.Status(service, handler)
 
 	// then
 	if result != ServiceStatusUnknown {
@@ -121,7 +121,7 @@ func TestServiceExecServiceHandlerStart01(t *testing.T) {
 		action:   "status"}
 
 	// when
-	result := r.Start(service, handler)
+	result, _ := r.Start(service, handler)
 
 	// then
 	if result != ServiceStatusStarted {
@@ -158,7 +158,7 @@ func TestServiceExecServiceHandlerStop01(t *testing.T) {
 		action:   "status"}
 
 	// when
-	result := r.Stop(service, handler)
+	result, _ := r.Stop(service, handler)
 
 	// then
 	if result != ServiceStatusStopped {
@@ -244,7 +244,7 @@ Configuration details:
 		action:   "status"}
 
 	// when
-	result := r.Status(service, handler)
+	result, _ := r.Status(service, handler)
 
 	// then
 	if result != ServiceStatusStarted {
@@ -290,7 +290,7 @@ Configuration details:
 		action:   "status"}
 
 	// when
-	result := r.Status(service, handler)
+	result, _ := r.Status(service, handler)
 
 	// then
 	if result != ServiceStatusStopped {
@@ -324,7 +324,7 @@ func TestLinuxToWindowsStatus03(t *testing.T) {
 		action:   "status"}
 
 	// when
-	result := r.Status(service, handler)
+	result, _ := r.Status(service, handler)
 
 	// then
 	if result != ServiceStatusUnknown {
@@ -369,7 +369,7 @@ Configuration details:
 		action:   "start"}
 
 	// when
-	result := r.Start(service, handler)
+	result, _ := r.Start(service, handler)
 
 	// then
 	if result != ServiceStatusStarted {
@@ -419,7 +419,7 @@ Configuration details:
 		action:   "start"}
 
 	// when
-	result := r.Stop(service, handler)
+	result, _ := r.Stop(service, handler)
 
 	// then
 	if result != ServiceStatusStopped {
@@ -465,7 +465,7 @@ func TestWindowsToWindowsStatus01(t *testing.T) {
 		action:   "status"}
 
 	// when
-	result := r.Status(service, handler)
+	result, _ := r.Status(service, handler)
 
 	// then
 	if result != ServiceStatusStarted {
@@ -505,7 +505,7 @@ func TestWindowsToWindowsStatus02(t *testing.T) {
 		action:   "status"}
 
 	// when
-	result := r.Status(service, handler)
+	result, _ := r.Status(service, handler)
 
 	// then
 	if result != ServiceStatusStopped {
@@ -541,7 +541,7 @@ The specified service does not exist as an installed service.`,
 		action:   "status"}
 
 	// when
-	result := r.Status(service, handler)
+	result, _ := r.Status(service, handler)
 
 	// then
 	if result != ServiceStatusUnknown {
@@ -583,7 +583,7 @@ func TestWindowsToWindowsStart01(t *testing.T) {
 		action:   "start"}
 
 	// when
-	result := r.Start(service, handler)
+	result, _ := r.Start(service, handler)
 
 	// then
 	if result != ServiceStatusStarted {
@@ -627,7 +627,7 @@ func TestWindowsToWindowsStop01(t *testing.T) {
 		action:   "start"}
 
 	// when
-	result := r.Stop(service, handler)
+	result, _ := r.Stop(service, handler)
 
 	// then
 	if result != ServiceStatusStopped {

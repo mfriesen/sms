@@ -3,38 +3,44 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"runtime"
 	//"github.com/jcelliott/lumber"
 	"regexp"
 	"strings"
 )
 
 type ServiceHandler interface {
-	Start(service Service, handler ProtocolHandler) int
-	Status(service Service, handler ProtocolHandler) int
-	Stop(service Service, handler ProtocolHandler) int
+	Start(service Service, handler ProtocolHandler) (int, error)
+	Status(service Service, handler ProtocolHandler) (int, error)
+	Stop(service Service, handler ProtocolHandler) (int, error)
 	IsSupported(handler ProtocolHandler) bool
 }
 
 type ServiceExecServiceHandler struct {
 }
 
-func (r *ServiceExecServiceHandler) Start(service Service, protocol ProtocolHandler) int {
+func (r *ServiceExecServiceHandler) Start(service Service, protocol ProtocolHandler) (int, error) {
 	log.Info("starting %s service", service.name)
 
+	status := ServiceStatusUnknown
 	service.action = "start"
-	r.RunAction(service, protocol)
+	_, err := r.RunAction(service, protocol)
 
-	return r.Status(service, protocol)
+	if err == nil {
+		status, err = r.Status(service, protocol)
+	}
+
+	return status, err
 }
 
-func (r *ServiceExecServiceHandler) Status(service Service, protocol ProtocolHandler) int {
+func (r *ServiceExecServiceHandler) Status(service Service, protocol ProtocolHandler) (int, error) {
 
 	log.Info("determining service %s status", service.name)
 
 	service.action = "status"
 	status := ServiceStatusUnknown
 
-	text := r.RunAction(service, protocol)
+	text, err := r.RunAction(service, protocol)
 
 	if len(text) > 0 {
 
@@ -48,10 +54,10 @@ func (r *ServiceExecServiceHandler) Status(service Service, protocol ProtocolHan
 		}
 	}
 
-	return status
+	return status, err
 }
 
-func (r *ServiceExecServiceHandler) RunAction(service Service, protocol ProtocolHandler) string {
+func (r *ServiceExecServiceHandler) RunAction(service Service, protocol ProtocolHandler) (string, error) {
 
 	var buffer bytes.Buffer
 
@@ -61,19 +67,24 @@ func (r *ServiceExecServiceHandler) RunAction(service Service, protocol Protocol
 		buffer.WriteString(fmt.Sprintf("sudo service %s %s", service.name, service.action))
 	}
 
-	stdout, _ := protocol.Run(service, buffer.String())
+	stdout, err := protocol.Run(service, buffer.String())
 
-	return stdout
+	return stdout, err
 }
 
-func (r *ServiceExecServiceHandler) Stop(service Service, protocol ProtocolHandler) int {
+func (r *ServiceExecServiceHandler) Stop(service Service, protocol ProtocolHandler) (int, error) {
 	log.Info("stopping %s service", service.name)
 
+	status := ServiceStatusUnknown
 	service.action = "stop"
 
-	r.RunAction(service, protocol)
+	_, err := r.RunAction(service, protocol)
 
-	return r.Status(service, protocol)
+	if err == nil {
+		status, err = r.Status(service, protocol)
+	}
+
+	return status, err
 }
 
 func (r *ServiceExecServiceHandler) IsSupported(protocol ProtocolHandler) bool {
@@ -98,19 +109,26 @@ func checkCommandSupported(stdout string, stderr string) bool {
 type SambaServiceHandler struct {
 }
 
-func (r *SambaServiceHandler) Start(service Service, protocol ProtocolHandler) int {
-	cmd := fmt.Sprintf("net rpc service start %s -I %s -U %s%%%s", service.name, service.host, service.user, service.password)
-	protocol.Run(service, cmd)
+func (r *SambaServiceHandler) Start(service Service, protocol ProtocolHandler) (int, error) {
 
-	return r.Status(service, protocol)
+	status := ServiceStatusUnknown
+	cmd := fmt.Sprintf("net rpc service start %s -I %s -U %s%%%s", service.name, service.host, service.user, service.password)
+
+	_, err := protocol.Run(service, cmd)
+
+	if err == nil {
+		status, err = r.Status(service, protocol)
+	}
+
+	return status, err
 }
 
-func (r *SambaServiceHandler) Status(service Service, protocol ProtocolHandler) int {
+func (r *SambaServiceHandler) Status(service Service, protocol ProtocolHandler) (int, error) {
 
 	status := ServiceStatusUnknown
 
 	cmd := fmt.Sprintf("net rpc service status %s -I %s -U %s%%%s", service.name, service.host, service.user, service.password)
-	stdout, _ := protocol.Run(service, cmd)
+	stdout, err := protocol.Run(service, cmd)
 
 	if strings.Contains(stdout, "is running") {
 		status = ServiceStatusStarted
@@ -118,38 +136,49 @@ func (r *SambaServiceHandler) Status(service Service, protocol ProtocolHandler) 
 		status = ServiceStatusStopped
 	}
 
-	return status
+	return status, err
 }
 
-func (r *SambaServiceHandler) Stop(service Service, protocol ProtocolHandler) int {
+func (r *SambaServiceHandler) Stop(service Service, protocol ProtocolHandler) (int, error) {
 
+	status := ServiceStatusUnknown
 	cmd := fmt.Sprintf("net rpc service stop %s -I %s -U %s%%%s", service.name, service.host, service.user, service.password)
-	protocol.Run(service, cmd)
 
-	return r.Status(service, protocol)
+	_, err := protocol.Run(service, cmd)
+
+	if err == nil {
+		status, err = r.Status(service, protocol)
+	}
+
+	return status, err
 }
 
 func (r *SambaServiceHandler) IsSupported(protocol ProtocolHandler) bool {
-	return isCommandSupported(protocol, "net")
+	return strings.Contains(runtime.GOOS, "linux")
 }
 
 type ScExecServiceHandler struct {
 }
 
-func (r *ScExecServiceHandler) Start(service Service, protocol ProtocolHandler) int {
+func (r *ScExecServiceHandler) Start(service Service, protocol ProtocolHandler) (int, error) {
 
+	status := ServiceStatusUnknown
 	cmd := fmt.Sprintf("sc \\\\%s start %s", service.host, service.name)
-	protocol.Run(service, cmd)
+	_, err := protocol.Run(service, cmd)
 
-	return r.Status(service, protocol)
+	if err == nil {
+		status, err = r.Status(service, protocol)
+	}
+
+	return status, err
 }
 
-func (r *ScExecServiceHandler) Status(service Service, protocol ProtocolHandler) int {
+func (r *ScExecServiceHandler) Status(service Service, protocol ProtocolHandler) (int, error) {
 
 	status := ServiceStatusUnknown
 	cmd := fmt.Sprintf("sc \\\\%s query %s", service.host, service.name)
 
-	stdout, _ := protocol.Run(service, cmd)
+	stdout, err := protocol.Run(service, cmd)
 
 	if strings.Contains(stdout, "RUNNING") {
 		status = ServiceStatusStarted
@@ -157,17 +186,22 @@ func (r *ScExecServiceHandler) Status(service Service, protocol ProtocolHandler)
 		status = ServiceStatusStopped
 	}
 
-	return status
+	return status, err
 }
 
-func (r *ScExecServiceHandler) Stop(service Service, protocol ProtocolHandler) int {
+func (r *ScExecServiceHandler) Stop(service Service, protocol ProtocolHandler) (int, error) {
 
+	status := ServiceStatusUnknown
 	cmd := fmt.Sprintf("sc \\\\%s stop %s", service.host, service.name)
-	protocol.Run(service, cmd)
+	_, err := protocol.Run(service, cmd)
 
-	return r.Status(service, protocol)
+	if err == nil {
+		status, err = r.Status(service, protocol)
+	}
+
+	return status, err
 }
 
 func (r *ScExecServiceHandler) IsSupported(protocol ProtocolHandler) bool {
-	return isCommandSupported(protocol, "sc query")
+	return strings.Contains(runtime.GOOS, "windows")
 }

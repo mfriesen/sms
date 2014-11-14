@@ -174,7 +174,6 @@ func (r *WindowsProtocolHandler) Run(service Service, cmd string) (string, error
 	parts = parts[1:len(parts)]
 
 	s, err := exec.Command(head, parts...).CombinedOutput()
-	//s, err := exec.Command("sh", "-c", cmd).CombinedOutput()
 
 	log.Debug("got response ", string(s))
 	log.Debug("got error ", err)

@@ -191,14 +191,18 @@ func run(service Service) error {
 						status := ServiceStatusUnknown
 
 						if service.action == "status" {
-							status = handler.Status(service, protocol)
+							status, err = handler.Status(service, protocol)
 						} else if service.action == "start" {
-							status = handler.Start(service, protocol)
+							status, err = handler.Start(service, protocol)
 						} else if service.action == "stop" {
-							status = handler.Stop(service, protocol)
+							status, err = handler.Stop(service, protocol)
 						}
 
-						fmt.Println(fmt.Sprintf("service %s is %s", service.name, ServiceStatus[status]))
+						if err != nil {
+							fmt.Println(fmt.Sprintf("an error ocurred %s", err.Error()))
+						} else {
+							fmt.Println(fmt.Sprintf("service %s is %s", service.name, ServiceStatus[status]))
+						}
 
 						completed = true
 						break
