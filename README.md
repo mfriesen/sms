@@ -25,7 +25,7 @@
   -v, --verbose  show debug info
 ```
 
- ### Examples
+### Examples
 
  Get the status of a Linux Service (requires the Linux Server is running SSH)
 
