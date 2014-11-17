@@ -203,9 +203,13 @@ func run(service Service) error {
 							status, err = handler.Stop(service, protocol)
 						} else if service.action == "restart" {
 
-							status, err = handler.Stop(service, protocol)
+							status, err = handler.Status(service, protocol)
 
-							if err == nil {
+							if err == nil && status == ServiceStatusStarted {
+								status, err = handler.Stop(service, protocol)
+							}
+
+							if err == nil && status == ServiceStatusStopped {
 								status, err = handler.Start(service, protocol)
 							}
 						}

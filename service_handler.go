@@ -3,10 +3,10 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"runtime"
-	//"github.com/jcelliott/lumber"
 	"regexp"
+	"runtime"
 	"strings"
+	"time"
 )
 
 type ServiceHandler interface {
@@ -158,6 +158,7 @@ func (r *SambaServiceHandler) IsSupported(protocol ProtocolHandler) bool {
 }
 
 type ScExecServiceHandler struct {
+	errorCount int
 }
 
 func (r *ScExecServiceHandler) Start(service Service, protocol ProtocolHandler) (int, error) {
@@ -180,7 +181,18 @@ func (r *ScExecServiceHandler) Status(service Service, protocol ProtocolHandler)
 
 	stdout, err := protocol.Run(service, cmd)
 
-	if strings.Contains(stdout, "RUNNING") {
+	// windows returns right away, give it some time to update the service's status
+	time.Sleep(time.Duration(1000) * time.Millisecond)
+
+	if strings.Contains(stdout, "_PENDING") {
+		if r.errorCount < 60 {
+			time.Sleep(time.Duration(500) * time.Millisecond)
+			r.errorCount++
+			fmt.Println(r.errorCount)
+
+			status, err = r.Status(service, protocol)
+		}
+	} else if strings.Contains(stdout, "RUNNING") {
 		status = ServiceStatusStarted
 	} else if strings.Contains(stdout, "STOPPED") {
 		status = ServiceStatusStopped
