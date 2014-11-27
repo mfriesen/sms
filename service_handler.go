@@ -162,16 +162,41 @@ type ScExecServiceHandler struct {
 }
 
 func (r *ScExecServiceHandler) Start(service Service, protocol ProtocolHandler) (int, error) {
-
-	status := ServiceStatusUnknown
 	cmd := fmt.Sprintf("sc \\\\%s start %s", service.host, service.name)
-	_, err := protocol.Run(service, cmd)
+	return r.StartOrStop(service, protocol, cmd, ServiceStatusStarted)
+}
 
-	if err == nil {
+func (r *ScExecServiceHandler) Stop(service Service, protocol ProtocolHandler) (int, error) {
+	cmd := fmt.Sprintf("sc \\\\%s stop %s", service.host, service.name)
+	return r.StartOrStop(service, protocol, cmd, ServiceStatusStopped)
+}
+
+func (r *ScExecServiceHandler) StartOrStop(service Service, protocol ProtocolHandler, cmd string, wantedStatus int) (int, error) {
+
+	var err error
+	status := ServiceStatusUnknown
+
+	_, retErr := protocol.Run(service, cmd)
+
+	i := 0
+	for status != wantedStatus {
+
 		status, err = r.Status(service, protocol)
+
+		// set retErr to error from status only if it's never been set
+		// or call to Status returned no error
+		if retErr == nil || err == nil {
+			retErr = err
+		}
+
+		if i == 20 || retErr != nil {
+			status = ServiceStatusUnknown
+		} else {
+			i++
+		}
 	}
 
-	return status, err
+	return status, retErr
 }
 
 func (r *ScExecServiceHandler) Status(service Service, protocol ProtocolHandler) (int, error) {
@@ -186,9 +211,9 @@ func (r *ScExecServiceHandler) Status(service Service, protocol ProtocolHandler)
 
 	if strings.Contains(stdout, "_PENDING") {
 		if r.errorCount < 60 {
+			fmt.Print(".")
 			time.Sleep(time.Duration(500) * time.Millisecond)
 			r.errorCount++
-			fmt.Println(r.errorCount)
 
 			status, err = r.Status(service, protocol)
 		}
@@ -196,19 +221,6 @@ func (r *ScExecServiceHandler) Status(service Service, protocol ProtocolHandler)
 		status = ServiceStatusStarted
 	} else if strings.Contains(stdout, "STOPPED") {
 		status = ServiceStatusStopped
-	}
-
-	return status, err
-}
-
-func (r *ScExecServiceHandler) Stop(service Service, protocol ProtocolHandler) (int, error) {
-
-	status := ServiceStatusUnknown
-	cmd := fmt.Sprintf("sc \\\\%s stop %s", service.host, service.name)
-	_, err := protocol.Run(service, cmd)
-
-	if err == nil {
-		status, err = r.Status(service, protocol)
 	}
 
 	return status, err

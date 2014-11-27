@@ -49,7 +49,7 @@ func (r *SSHProtocolHandler) OpenConnection(service Service) error {
 			ssh.Password(service.password),
 		},
 	}
-	// TODO handle wrong username / password
+
 	log.Debug("opening connection to %s:%s: ", service.host, service.port)
 
 	conn, error := ssh.Dial("tcp", fmt.Sprintf("%s:%s", service.host, service.port), config)
