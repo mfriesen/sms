@@ -110,17 +110,13 @@ type SambaServiceHandler struct {
 }
 
 func (r *SambaServiceHandler) Start(service Service, protocol ProtocolHandler) (int, error) {
-
-	status := ServiceStatusUnknown
 	cmd := fmt.Sprintf("net rpc service start %s -I %s -U %s%%%s", service.name, service.host, service.user, service.password)
+	return StartOrStopWitbRetry(service, protocol, r, cmd, ServiceStatusStarted)
+}
 
-	_, err := protocol.Run(service, cmd)
-
-	if err == nil {
-		status, err = r.Status(service, protocol)
-	}
-
-	return status, err
+func (r *SambaServiceHandler) Stop(service Service, protocol ProtocolHandler) (int, error) {
+	cmd := fmt.Sprintf("net rpc service stop %s -I %s -U %s%%%s", service.name, service.host, service.user, service.password)
+	return StartOrStopWitbRetry(service, protocol, r, cmd, ServiceStatusStopped)
 }
 
 func (r *SambaServiceHandler) Status(service Service, protocol ProtocolHandler) (int, error) {
@@ -139,20 +135,6 @@ func (r *SambaServiceHandler) Status(service Service, protocol ProtocolHandler) 
 	return status, err
 }
 
-func (r *SambaServiceHandler) Stop(service Service, protocol ProtocolHandler) (int, error) {
-
-	status := ServiceStatusUnknown
-	cmd := fmt.Sprintf("net rpc service stop %s -I %s -U %s%%%s", service.name, service.host, service.user, service.password)
-
-	_, err := protocol.Run(service, cmd)
-
-	if err == nil {
-		status, err = r.Status(service, protocol)
-	}
-
-	return status, err
-}
-
 func (r *SambaServiceHandler) IsSupported(protocol ProtocolHandler) bool {
 	return strings.Contains(runtime.GOOS, "linux")
 }
@@ -163,40 +145,12 @@ type ScExecServiceHandler struct {
 
 func (r *ScExecServiceHandler) Start(service Service, protocol ProtocolHandler) (int, error) {
 	cmd := fmt.Sprintf("sc \\\\%s start %s", service.host, service.name)
-	return r.StartOrStop(service, protocol, cmd, ServiceStatusStarted)
+	return StartOrStopWitbRetry(service, protocol, r, cmd, ServiceStatusStarted)
 }
 
 func (r *ScExecServiceHandler) Stop(service Service, protocol ProtocolHandler) (int, error) {
 	cmd := fmt.Sprintf("sc \\\\%s stop %s", service.host, service.name)
-	return r.StartOrStop(service, protocol, cmd, ServiceStatusStopped)
-}
-
-func (r *ScExecServiceHandler) StartOrStop(service Service, protocol ProtocolHandler, cmd string, wantedStatus int) (int, error) {
-
-	var err error
-	status := ServiceStatusUnknown
-
-	_, retErr := protocol.Run(service, cmd)
-
-	i := 0
-	for status != wantedStatus {
-
-		status, err = r.Status(service, protocol)
-
-		// set retErr to error from status only if it's never been set
-		// or call to Status returned no error
-		if retErr == nil || err == nil {
-			retErr = err
-		}
-
-		if i == 20 || retErr != nil {
-			status = ServiceStatusUnknown
-		} else {
-			i++
-		}
-	}
-
-	return status, retErr
+	return StartOrStopWitbRetry(service, protocol, r, cmd, ServiceStatusStopped)
 }
 
 func (r *ScExecServiceHandler) Status(service Service, protocol ProtocolHandler) (int, error) {
@@ -228,4 +182,32 @@ func (r *ScExecServiceHandler) Status(service Service, protocol ProtocolHandler)
 
 func (r *ScExecServiceHandler) IsSupported(protocol ProtocolHandler) bool {
 	return strings.Contains(runtime.GOOS, "windows")
+}
+
+func StartOrStopWitbRetry(service Service, protocol ProtocolHandler, serviceHandler ServiceHandler, cmd string, wantedStatus int) (int, error) {
+
+	var err error
+	status := ServiceStatusUnknown
+
+	_, retErr := protocol.Run(service, cmd)
+
+	i := 0
+	for status != wantedStatus {
+
+		status, err = serviceHandler.Status(service, protocol)
+
+		// set retErr to error from status only if it's never been set
+		// or call to Status returned no error
+		if retErr == nil || err == nil {
+			retErr = err
+		}
+
+		if i == 20 || retErr != nil {
+			status = ServiceStatusUnknown
+		} else {
+			i++
+		}
+	}
+
+	return status, retErr
 }
