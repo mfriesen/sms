@@ -202,9 +202,12 @@ func StartOrStopWitbRetry(service Service, protocol ProtocolHandler, serviceHand
 			retErr = err
 		}
 
-		if i == 20 || retErr != nil {
+		if i == 60 || retErr != nil {
 			status = ServiceStatusUnknown
+			break
 		} else {
+			fmt.Print(".")
+			time.Sleep(time.Duration(1000) * time.Millisecond)
 			i++
 		}
 	}
