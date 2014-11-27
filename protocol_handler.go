@@ -7,10 +7,9 @@ import (
 	"io"
 	"net"
 	"os/exec"
-	"runtime"
 	"strings"
 	"time"
-
+"runtime"
 	"code.google.com/p/go.crypto/ssh"
 )
 
@@ -154,11 +153,11 @@ type WindowsProtocolHandler struct {
 }
 
 func (r *WindowsProtocolHandler) IsSupported(service Service) bool {
-	return strings.Contains(runtime.GOOS, "windows")
+	return strings.Contains(runtime.GOOS, "windows") || strings.Contains(runtime.GOOS, "linux")
 }
 
 func (r *WindowsProtocolHandler) IsPasswordNeeded(service Service) bool {
-	return false
+	return strings.Contains(runtime.GOOS, "linux")
 }
 
 func (r *WindowsProtocolHandler) OpenConnection(service Service) error {
