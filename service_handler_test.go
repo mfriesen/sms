@@ -178,6 +178,55 @@ func TestServiceExecServiceHandlerStop01(t *testing.T) {
 	}
 }
 
+// Search Service
+func TestServiceExecServiceHandlerSearch01(t *testing.T) {
+
+	// given
+	mock := MockProtocolHandler{results: [10]string{` [ ? ]  service1
+ [ ? ]  myname
+ [ ? ]  service2
+ [ ? ]  myname2
+ [ ? ]  testmyname`}}
+
+	handler := ProtocolHandler(&mock)
+
+	r := ServiceHandler(&ServiceExecServiceHandler{})
+	service := Service{
+		user:     "myuser",
+		password: "mypass",
+		host:     "myhost",
+		name:     "myname",
+		action:   "search"}
+
+	// when
+	result, _ := r.Search(service, handler)
+
+	// then
+	if len(result) != 3 {
+		t.Error("Expected 3 result, got ", len(result))
+	}
+
+	if len(result) == 3 && result[0] != "[ ? ]  myname" {
+		t.Error("Expected [ ? ]  myname result, got ", result[0])
+	}
+
+	if len(result) == 3 && result[1] != "[ ? ]  myname2" {
+		t.Error("Expected [ ? ]  myname2 result, got ", result[1])
+	}
+
+	if len(result) == 3 && result[2] != "[ ? ]  testmyname" {
+		t.Error("Expected [ ? ]  testmyname result, got ", result[2])
+	}
+
+	if mock.run != 1 {
+		t.Error("Expected runs of 1, got ", mock.run)
+	}
+
+	if mock.runs[0] != "service --status-all" {
+		t.Error("Expected other, got ", mock.runs[0])
+	}
+}
+
 type MockProtocolHandler struct {
 	runs    [10]string
 	results [10]string
@@ -436,6 +485,55 @@ Configuration details:
 
 	if mock.runs[1] != "net rpc service status myname -I myhost -U myuser%mypass" {
 		t.Error("Expected other, got ", mock.runs[1])
+	}
+}
+
+// Search Service
+func TestLinuxToWindowsSearch01(t *testing.T) {
+
+	// given
+	mock := MockProtocolHandler{results: [10]string{`service1		"Application service1"
+ myname			"Application myname"
+ service2		"Application service2"
+ myname2		"Application myname2"
+ testmyname		"Application testmyname"`}}
+
+	handler := ProtocolHandler(&mock)
+
+	r := ServiceHandler(&ServiceExecServiceHandler{})
+	service := Service{
+		user:     "myuser",
+		password: "mypass",
+		host:     "myhost",
+		name:     "myname",
+		action:   "search"}
+
+	// when
+	result, _ := r.Search(service, handler)
+
+	// then
+	if len(result) != 3 {
+		t.Error("Expected 3 result, got ", len(result))
+	}
+
+	if len(result) == 3 && result[0] != "myname			\"Application myname\"" {
+		t.Error("Expected myname			\"Application myname\" result, got ", result[0])
+	}
+
+	if len(result) == 3 && result[1] != "myname2		\"Application myname2\"" {
+		t.Error("Expected myname2		\"Application myname2\" result, got ", result[1])
+	}
+
+	if len(result) == 3 && result[2] != "testmyname		\"Application testmyname\"" {
+		t.Error("Expected testmyname		\"Application testmyname\" result, got ", result[2])
+	}
+
+	if mock.run != 1 {
+		t.Error("Expected runs of 1, got ", mock.run)
+	}
+
+	if mock.runs[0] != "service --status-all" {
+		t.Error("Expected other, got ", mock.runs[0])
 	}
 }
 

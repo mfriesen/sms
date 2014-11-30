@@ -13,18 +13,29 @@ type ServiceHandler interface {
 	Start(service Service, handler ProtocolHandler) (int, error)
 	Status(service Service, handler ProtocolHandler) (int, error)
 	Stop(service Service, handler ProtocolHandler) (int, error)
+	Search(service Service, handler ProtocolHandler) ([]string, error)
 	IsSupported(handler ProtocolHandler) bool
 }
 
 type ServiceExecServiceHandler struct {
 }
 
+func (r *ServiceExecServiceHandler) Search(service Service, protocol ProtocolHandler) ([]string, error) {
+	log.Info("search for %s service", service.name)
+
+	cmd := "service --status-all"
+
+	stdout, err := r.RunAction(cmd, service, protocol, false)
+
+	return Search(service, stdout, err)
+}
+
 func (r *ServiceExecServiceHandler) Start(service Service, protocol ProtocolHandler) (int, error) {
 	log.Info("starting %s service", service.name)
 
 	status := ServiceStatusUnknown
-	service.action = "start"
-	_, err := r.RunAction(service, protocol)
+	cmd := fmt.Sprintf("service %s start", service.name)
+	_, err := r.RunAction(cmd, service, protocol, true)
 
 	if err == nil {
 		status, err = r.Status(service, protocol)
@@ -37,10 +48,10 @@ func (r *ServiceExecServiceHandler) Status(service Service, protocol ProtocolHan
 
 	log.Info("determining service %s status", service.name)
 
-	service.action = "status"
 	status := ServiceStatusUnknown
+	cmd := fmt.Sprintf("service %s status", service.name)
 
-	text, err := r.RunAction(service, protocol)
+	text, err := r.RunAction(cmd, service, protocol, true)
 
 	if len(text) > 0 {
 
@@ -57,14 +68,18 @@ func (r *ServiceExecServiceHandler) Status(service Service, protocol ProtocolHan
 	return status, err
 }
 
-func (r *ServiceExecServiceHandler) RunAction(service Service, protocol ProtocolHandler) (string, error) {
+func (r *ServiceExecServiceHandler) RunAction(cmd string, service Service, protocol ProtocolHandler, includeSudo bool) (string, error) {
 
 	var buffer bytes.Buffer
 
-	if service.sudo != "" {
-		buffer.WriteString(fmt.Sprintf("echo '%s' | sudo -S service %s %s", service.sudo, service.name, service.action))
+	if includeSudo {
+		if service.sudo != "" {
+			buffer.WriteString(fmt.Sprintf("echo '%s' | sudo -S %s", service.sudo, cmd))
+		} else {
+			buffer.WriteString(fmt.Sprintf("sudo %s", cmd))
+		}
 	} else {
-		buffer.WriteString(fmt.Sprintf("sudo service %s %s", service.name, service.action))
+		buffer.WriteString(cmd)
 	}
 
 	stdout, err := protocol.Run(service, buffer.String())
@@ -76,9 +91,9 @@ func (r *ServiceExecServiceHandler) Stop(service Service, protocol ProtocolHandl
 	log.Info("stopping %s service", service.name)
 
 	status := ServiceStatusUnknown
-	service.action = "stop"
+	cmd := fmt.Sprintf("service %s stop", service.name)
 
-	_, err := r.RunAction(service, protocol)
+	_, err := r.RunAction(cmd, service, protocol, true)
 
 	if err == nil {
 		status, err = r.Status(service, protocol)
@@ -107,6 +122,15 @@ func checkCommandSupported(stdout string, stderr string) bool {
 }
 
 type SambaServiceHandler struct {
+}
+
+func (r *SambaServiceHandler) Search(service Service, protocol ProtocolHandler) ([]string, error) {
+	log.Info("search for %s service", service.name)
+	cmd := fmt.Sprintf("net rpc service list -I %s -U %s%%%s", service.host, service.user, service.password)
+
+	stdout, err := protocol.Run(service, cmd)
+
+	return Search(service, stdout, err)
 }
 
 func (r *SambaServiceHandler) Start(service Service, protocol ProtocolHandler) (int, error) {
@@ -141,6 +165,13 @@ func (r *SambaServiceHandler) IsSupported(protocol ProtocolHandler) bool {
 
 type ScExecServiceHandler struct {
 	errorCount int
+}
+
+func (r *ScExecServiceHandler) Search(service Service, protocol ProtocolHandler) ([]string, error) {
+	log.Info("search for %s service", service.name)
+	//list := []string{}
+
+	return nil, nil
 }
 
 func (r *ScExecServiceHandler) Start(service Service, protocol ProtocolHandler) (int, error) {
@@ -213,4 +244,27 @@ func StartOrStopWitbRetry(service Service, protocol ProtocolHandler, serviceHand
 	}
 
 	return status, retErr
+}
+
+func Search(service Service, stdout string, err error) ([]string, error) {
+
+	list := []string{}
+
+	if err == nil {
+
+		rp := regexp.MustCompile(fmt.Sprintf(".*%s.*", service.name))
+
+		strs := strings.Split(stdout, "\n")
+
+		for _, element := range strs {
+
+			if rp.MatchString(element) {
+				list = append(list, strings.Trim(element, " "))
+				//break
+			}
+		}
+	}
+
+	return list, err
+
 }
