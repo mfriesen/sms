@@ -76,6 +76,10 @@ func updateOptions(service Service, options map[string]interface{}) Service {
 		}
 	}
 
+	if options["search"] == true {
+		service.action = "search"
+	}
+
 	if options["start"] == true {
 		service.action = "start"
 	}
@@ -137,6 +141,7 @@ Usage:
   sms [options] [user@]<host>[:port] <servicename> start
   sms [options] [user@]<host>[:port] <servicename> status
   sms [options] [user@]<host>[:port] <servicename> stop
+  sms [options] [user@]<host>[:port] search <servicename>
 
  Options:
   --user=userid  userid
@@ -156,6 +161,7 @@ Usage:
 func run(service Service) error {
 
 	var err error
+	var strs []string
 	completed := false
 
 	protocols := [...]ProtocolHandler{
@@ -193,31 +199,46 @@ func run(service Service) error {
 
 					if handler_supported {
 
-						status := ServiceStatusUnknown
+						if service.action == "search" {
 
-						if service.action == "status" {
-							status, err = handler.Status(service, protocol)
-						} else if service.action == "start" {
-							status, err = handler.Start(service, protocol)
-						} else if service.action == "stop" {
-							status, err = handler.Stop(service, protocol)
-						} else if service.action == "restart" {
+							strs, err = handler.Search(service, protocol)
 
-							status, err = handler.Status(service, protocol)
-
-							if err == nil && status == ServiceStatusStarted {
-								status, err = handler.Stop(service, protocol)
+							if err == nil {
+								for _, element := range strs {
+									fmt.Println(element)
+								}
 							}
 
-							if err == nil && status == ServiceStatusStopped {
+						} else {
+
+							status := ServiceStatusUnknown
+
+							if service.action == "status" {
+								status, err = handler.Status(service, protocol)
+							} else if service.action == "start" {
 								status, err = handler.Start(service, protocol)
+							} else if service.action == "stop" {
+								status, err = handler.Stop(service, protocol)
+							} else if service.action == "restart" {
+
+								status, err = handler.Status(service, protocol)
+
+								if err == nil && status == ServiceStatusStarted {
+									status, err = handler.Stop(service, protocol)
+								}
+
+								if err == nil && status == ServiceStatusStopped {
+									status, err = handler.Start(service, protocol)
+								}
+							}
+
+							if err == nil {
+								fmt.Println(fmt.Sprintf("service %s is %s", service.name, ServiceStatus[status]))
 							}
 						}
 
 						if err != nil {
 							fmt.Println(fmt.Sprintf("an error ocurred %s", err.Error()))
-						} else {
-							fmt.Println(fmt.Sprintf("service %s is %s", service.name, ServiceStatus[status]))
 						}
 
 						completed = true

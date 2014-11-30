@@ -10,11 +10,11 @@ import (
 )
 
 type ServiceHandler interface {
-	Start(service Service, handler ProtocolHandler) (int, error)
-	Status(service Service, handler ProtocolHandler) (int, error)
-	Stop(service Service, handler ProtocolHandler) (int, error)
-	Search(service Service, handler ProtocolHandler) ([]string, error)
-	IsSupported(handler ProtocolHandler) bool
+	Start(service Service, protocol ProtocolHandler) (int, error)
+	Status(service Service, protocol ProtocolHandler) (int, error)
+	Stop(service Service, protocol ProtocolHandler) (int, error)
+	Search(service Service, protocol ProtocolHandler) ([]string, error)
+	IsSupported(protocol ProtocolHandler) bool
 }
 
 type ServiceExecServiceHandler struct {
@@ -260,7 +260,6 @@ func Search(service Service, stdout string, err error) ([]string, error) {
 
 			if rp.MatchString(element) {
 				list = append(list, strings.Trim(element, " "))
-				//break
 			}
 		}
 	}
