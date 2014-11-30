@@ -48,12 +48,8 @@ func updateOptions(service Service, options map[string]interface{}) Service {
 		log.Level(lumber.DEBUG)
 	}
 
-	if hasKey(options, "--user") {
-		service.user = options["--user"].(string)
-	} else {
-		usr, _ := user.Current()
-		service.user = usr.Username
-	}
+	usr, _ := user.Current()
+	service.user = usr.Username
 
 	if hasKey(options, "<host>") {
 
@@ -144,7 +140,6 @@ Usage:
   sms [options] [user@]<host>[:port] search <servicename>
 
  Options:
-  --user=userid  userid
   --password=password  password
   --sudo=sudopw  sudo password
   -h, --help     show help

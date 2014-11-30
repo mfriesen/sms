@@ -216,10 +216,10 @@ func TestUsage10(t *testing.T) {
 	}
 }
 
-// test --user, --password parameters
+// test --password parameters
 func TestUsage11(t *testing.T) {
 	// given
-	vargs := []string{"--user=testuser", "--password=password", "testhost", "servicename", "stop"}
+	vargs := []string{"--password=password", "testuser@testhost", "servicename", "stop"}
 
 	// when
 	service, err := usage(vargs, false)
