@@ -169,9 +169,13 @@ type ScExecServiceHandler struct {
 
 func (r *ScExecServiceHandler) Search(service Service, protocol ProtocolHandler) ([]string, error) {
 	log.Info("search for %s service", service.name)
-	//list := []string{}
 
-	return nil, nil
+	cmd := fmt.Sprintf("wmic /node:'%s' service where (name like '%%%s%%') get name", service.host, service.name)
+
+	stdout, err := protocol.Run(service, cmd)
+	strs := strings.Split(stdout, "\n")
+
+	return strs, err
 }
 
 func (r *ScExecServiceHandler) Start(service Service, protocol ProtocolHandler) (int, error) {

@@ -744,3 +744,51 @@ func TestWindowsToWindowsStop01(t *testing.T) {
 		t.Error("Expected other, got ", mock.runs[1])
 	}
 }
+
+// Search Service
+func TestWindowsToWindowsSearch01(t *testing.T) {
+	// given
+	mock := MockProtocolHandler{results: [10]string{`Name
+myname6032
+myname7047`,
+	}}
+
+	handler := ProtocolHandler(&mock)
+
+	r := ServiceHandler(&ScExecServiceHandler{})
+	service := Service{
+		user:     "myuser",
+		password: "mypass",
+		host:     "myhost",
+		name:     "myname",
+		action:   "start"}
+
+	// when
+	result, _ := r.Search(service, handler)
+
+	// then
+	if len(result) != 3 {
+		t.Error("Expected 3 result, got ", len(result))
+	}
+
+	if len(result) == 3 && result[0] != "Name" {
+		t.Error("Expected Name result, got ", result[0])
+	}
+
+	if len(result) == 3 && result[1] != "myname6032" {
+		t.Error("Expected myname6032 result, got ", result[1])
+	}
+
+	if len(result) == 3 && result[2] != "myname7047" {
+		t.Error("Expected myname7047 result, got ", result[2])
+	}
+
+	if mock.run != 1 {
+		t.Error("Expected runs of 1, got ", mock.run)
+	}
+
+	if mock.runs[0] != "wmic /node:'myhost' service where (name like '%myname%') get name" {
+		t.Error("Expected other, got ", mock.runs[0])
+	}
+
+}
