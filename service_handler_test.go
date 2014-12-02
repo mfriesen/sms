@@ -767,19 +767,15 @@ myname7047`,
 	result, _ := r.Search(service, handler)
 
 	// then
-	if len(result) != 3 {
-		t.Error("Expected 3 result, got ", len(result))
+	if len(result) != 2 {
+		t.Error("Expected 2 result, got ", len(result))
 	}
 
-	if len(result) == 3 && result[0] != "Name" {
-		t.Error("Expected Name result, got ", result[0])
-	}
-
-	if len(result) == 3 && result[1] != "myname6032" {
+	if len(result) == 2 && result[0] != "myname6032" {
 		t.Error("Expected myname6032 result, got ", result[1])
 	}
 
-	if len(result) == 3 && result[2] != "myname7047" {
+	if len(result) == 2 && result[1] != "myname7047" {
 		t.Error("Expected myname7047 result, got ", result[2])
 	}
 

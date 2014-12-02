@@ -173,9 +173,7 @@ func (r *ScExecServiceHandler) Search(service Service, protocol ProtocolHandler)
 	cmd := fmt.Sprintf("wmic /node:'%s' service where (name like '%%%s%%') get name", service.host, service.name)
 
 	stdout, err := protocol.Run(service, cmd)
-	strs := strings.Split(stdout, "\n")
-
-	return strs, err
+	return Search(service, stdout, err)
 }
 
 func (r *ScExecServiceHandler) Start(service Service, protocol ProtocolHandler) (int, error) {
