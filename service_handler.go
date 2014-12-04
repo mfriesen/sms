@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
 	"regexp"
 	"runtime"
@@ -24,24 +23,16 @@ func (r *ServiceExecServiceHandler) Search(service Service, protocol ProtocolHan
 	log.Info("search for %s service", service.name)
 
 	cmd := "service --status-all"
-
-	stdout, err := r.RunAction(cmd, service, protocol, false)
+	stdout, err := protocol.Run(service, cmd)
 
 	return Search(service, stdout, err)
 }
 
 func (r *ServiceExecServiceHandler) Start(service Service, protocol ProtocolHandler) (int, error) {
 	log.Info("starting %s service", service.name)
-
-	status := ServiceStatusUnknown
 	cmd := fmt.Sprintf("service %s start", service.name)
-	_, err := r.RunAction(cmd, service, protocol, true)
-
-	if err == nil {
-		status, err = r.Status(service, protocol)
-	}
-
-	return status, err
+	cmd = r.AddSudo(cmd, service)
+	return StartOrStopWitbRetry(service, protocol, r, cmd, ServiceStatusStarted)
 }
 
 func (r *ServiceExecServiceHandler) Status(service Service, protocol ProtocolHandler) (int, error) {
@@ -50,17 +41,18 @@ func (r *ServiceExecServiceHandler) Status(service Service, protocol ProtocolHan
 
 	status := ServiceStatusUnknown
 	cmd := fmt.Sprintf("service %s status", service.name)
+	cmd = r.AddSudo(cmd, service)
 
-	text, err := r.RunAction(cmd, service, protocol, true)
+	stdout, err := protocol.Run(service, cmd)
 
-	if len(text) > 0 {
+	if len(stdout) > 0 {
 
-		rp0 := regexp.MustCompile("( start)|( running)")
-		rp1 := regexp.MustCompile("( stop)")
+		rp0 := regexp.MustCompile("( start)|( is running)")
+		rp1 := regexp.MustCompile("( stop)|( is not running)")
 
-		if rp0.MatchString(text) {
+		if rp0.MatchString(stdout) {
 			status = ServiceStatusStarted
-		} else if rp1.MatchString(text) {
+		} else if rp1.MatchString(stdout) {
 			status = ServiceStatusStopped
 		}
 	}
@@ -68,38 +60,21 @@ func (r *ServiceExecServiceHandler) Status(service Service, protocol ProtocolHan
 	return status, err
 }
 
-func (r *ServiceExecServiceHandler) RunAction(cmd string, service Service, protocol ProtocolHandler, includeSudo bool) (string, error) {
+func (r *ServiceExecServiceHandler) AddSudo(cmd string, service Service) string {
 
-	var buffer bytes.Buffer
-
-	if includeSudo {
-		if service.sudo != "" {
-			buffer.WriteString(fmt.Sprintf("echo '%s' | sudo -S %s", service.sudo, cmd))
-		} else {
-			buffer.WriteString(fmt.Sprintf("sudo %s", cmd))
-		}
+	if service.sudo != "" {
+		return fmt.Sprintf("echo '%s' | sudo -S %s", service.sudo, cmd)
 	} else {
-		buffer.WriteString(cmd)
+		return fmt.Sprintf("sudo %s", cmd)
 	}
-
-	stdout, err := protocol.Run(service, buffer.String())
-
-	return stdout, err
 }
 
 func (r *ServiceExecServiceHandler) Stop(service Service, protocol ProtocolHandler) (int, error) {
 	log.Info("stopping %s service", service.name)
 
-	status := ServiceStatusUnknown
 	cmd := fmt.Sprintf("service %s stop", service.name)
-
-	_, err := r.RunAction(cmd, service, protocol, true)
-
-	if err == nil {
-		status, err = r.Status(service, protocol)
-	}
-
-	return status, err
+	cmd = r.AddSudo(cmd, service)
+	return StartOrStopWitbRetry(service, protocol, r, cmd, ServiceStatusStopped)
 }
 
 func (r *ServiceExecServiceHandler) IsSupported(protocol ProtocolHandler) bool {
@@ -235,7 +210,7 @@ func StartOrStopWitbRetry(service Service, protocol ProtocolHandler, serviceHand
 			retErr = err
 		}
 
-		if i == 60 || retErr != nil {
+		if i == 30 || retErr != nil {
 			status = ServiceStatusUnknown
 			break
 		} else {
