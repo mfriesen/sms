@@ -32,7 +32,7 @@ func (r *ServiceExecServiceHandler) Start(service Service, protocol ProtocolHand
 	log.Info("starting %s service", service.name)
 	cmd := fmt.Sprintf("service %s start", service.name)
 	cmd = r.AddSudo(cmd, service)
-	return StartOrStopWitbRetry(service, protocol, r, cmd, ServiceStatusStarted)
+	return StartOrStopWithRetry(service, protocol, r, cmd, ServiceStatusStarted)
 }
 
 func (r *ServiceExecServiceHandler) Status(service Service, protocol ProtocolHandler) (int, error) {
@@ -48,7 +48,7 @@ func (r *ServiceExecServiceHandler) Status(service Service, protocol ProtocolHan
 	if len(stdout) > 0 {
 
 		rp0 := regexp.MustCompile("( start)|( is running)")
-		rp1 := regexp.MustCompile("( stop)|( is not running)")
+		rp1 := regexp.MustCompile("( stop)|( not running)")
 
 		if rp0.MatchString(stdout) {
 			status = ServiceStatusStarted
@@ -74,7 +74,7 @@ func (r *ServiceExecServiceHandler) Stop(service Service, protocol ProtocolHandl
 
 	cmd := fmt.Sprintf("service %s stop", service.name)
 	cmd = r.AddSudo(cmd, service)
-	return StartOrStopWitbRetry(service, protocol, r, cmd, ServiceStatusStopped)
+	return StartOrStopWithRetry(service, protocol, r, cmd, ServiceStatusStopped)
 }
 
 func (r *ServiceExecServiceHandler) IsSupported(protocol ProtocolHandler) bool {
@@ -110,12 +110,12 @@ func (r *SambaServiceHandler) Search(service Service, protocol ProtocolHandler) 
 
 func (r *SambaServiceHandler) Start(service Service, protocol ProtocolHandler) (int, error) {
 	cmd := fmt.Sprintf("net rpc service start %s -I %s -U %s%%%s", service.name, service.host, service.user, service.password)
-	return StartOrStopWitbRetry(service, protocol, r, cmd, ServiceStatusStarted)
+	return StartOrStopWithRetry(service, protocol, r, cmd, ServiceStatusStarted)
 }
 
 func (r *SambaServiceHandler) Stop(service Service, protocol ProtocolHandler) (int, error) {
 	cmd := fmt.Sprintf("net rpc service stop %s -I %s -U %s%%%s", service.name, service.host, service.user, service.password)
-	return StartOrStopWitbRetry(service, protocol, r, cmd, ServiceStatusStopped)
+	return StartOrStopWithRetry(service, protocol, r, cmd, ServiceStatusStopped)
 }
 
 func (r *SambaServiceHandler) Status(service Service, protocol ProtocolHandler) (int, error) {
@@ -153,12 +153,12 @@ func (r *ScExecServiceHandler) Search(service Service, protocol ProtocolHandler)
 
 func (r *ScExecServiceHandler) Start(service Service, protocol ProtocolHandler) (int, error) {
 	cmd := fmt.Sprintf("sc \\\\%s start %s", service.host, service.name)
-	return StartOrStopWitbRetry(service, protocol, r, cmd, ServiceStatusStarted)
+	return StartOrStopWithRetry(service, protocol, r, cmd, ServiceStatusStarted)
 }
 
 func (r *ScExecServiceHandler) Stop(service Service, protocol ProtocolHandler) (int, error) {
 	cmd := fmt.Sprintf("sc \\\\%s stop %s", service.host, service.name)
-	return StartOrStopWitbRetry(service, protocol, r, cmd, ServiceStatusStopped)
+	return StartOrStopWithRetry(service, protocol, r, cmd, ServiceStatusStopped)
 }
 
 func (r *ScExecServiceHandler) Status(service Service, protocol ProtocolHandler) (int, error) {
@@ -192,7 +192,7 @@ func (r *ScExecServiceHandler) IsSupported(protocol ProtocolHandler) bool {
 	return strings.Contains(runtime.GOOS, "windows")
 }
 
-func StartOrStopWitbRetry(service Service, protocol ProtocolHandler, serviceHandler ServiceHandler, cmd string, wantedStatus int) (int, error) {
+func StartOrStopWithRetry(service Service, protocol ProtocolHandler, serviceHandler ServiceHandler, cmd string, wantedStatus int) (int, error) {
 
 	var err error
 	status := ServiceStatusUnknown
